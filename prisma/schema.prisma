@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model alokasi_produk {
+  id_alokasi       Int              @id @default(autoincrement())
+  tanggal_alokasi  DateTime         @db.Date
+  jumlah_alokasi   Int
+  stok_tersedia    Int
+  id_pemilik       Int
+  id_hasil         Int
+  id_pembuat_donut Int
+  id_pengantar     Int
+  id_produk        Int
+  id_lokasi        Int
+  id_varian        Int
+  produksi         produksi         @relation(fields: [id_hasil], references: [id_hasil])
+  lokasi_penjualan lokasi_penjualan @relation(fields: [id_lokasi], references: [id_lokasi])
+  pembuat_donut    pembuat_donut    @relation(fields: [id_pembuat_donut], references: [id_pembuat_donut])
+  pemilik          pemilik          @relation(fields: [id_pemilik], references: [id_pemilik])
+  pengantar        pengantar        @relation(fields: [id_pengantar], references: [id_pengantar])
+  produk           produk           @relation(fields: [id_produk], references: [id_produk])
+  varian_produk    varian_produk    @relation(fields: [id_varian], references: [id_varian])
+  laporan          laporan[]
+  pengiriman       pengiriman[]
+}
+
+model bahan_baku {
+  id_bahan         Int               @id @default(autoincrement())
+  nama_bahan       String            @unique @db.VarChar(50)
+  satuan           String            @db.VarChar(20)
+  id_pembuat_donut Int
+  id_pemilik       Int
+  pembuat_donut    pembuat_donut     @relation(fields: [id_pembuat_donut], references: [id_pembuat_donut])
+  pemilik          pemilik           @relation(fields: [id_pemilik], references: [id_pemilik])
+  pemakaian_bahan  pemakaian_bahan[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model detail_produk {
+  id_detail                 Int @id @default(autoincrement())
+  id_jadwal                 Int
+  jumlah_rencana_varian_pcs Int
+  jumlah_hasil_pcs          Int
+  jumlah_rusak_pcs          Int @default(0)
+  id_varian                 Int
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model detail_produksi {
+  id_hasil                  Int
+  id_varian                 Int
+  jumlah_rencana_varian_pcs Int
+  jumlah_hasil_pcs          Int
+  jumlah_rusak_pcs          Int
+  produksi                  produksi      @relation(fields: [id_hasil], references: [id_hasil])
+  varian_produk             varian_produk @relation(fields: [id_varian], references: [id_varian])
+
+  @@id([id_hasil, id_varian])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model laporan {
+  id_laporan        Int                @id @default(autoincrement())
+  tanggal_laporan   DateTime           @db.Date
+  periode_awal      DateTime           @db.Date
+  periode_akhir     DateTime           @db.Date
+  jenis_laporan     String             @db.VarChar(50)
+  id_hasil          Int?
+  id_penerimaan     Int?
+  id_alokasi        Int?
+  id_pengiriman     Int?
+  id_pemilik        Int
+  alokasi_produk    alokasi_produk?    @relation(fields: [id_alokasi], references: [id_alokasi], onDelete: Restrict)
+  produksi          produksi?          @relation(fields: [id_hasil], references: [id_hasil], onDelete: Restrict)
+  pemilik           pemilik            @relation(fields: [id_pemilik], references: [id_pemilik])
+  penerimaan_produk penerimaan_produk? @relation(fields: [id_penerimaan], references: [id_penerimaan], onDelete: Restrict)
+  pengiriman        pengiriman?        @relation(fields: [id_pengiriman], references: [id_pengiriman], onDelete: Restrict)
+}
+
+model lokasi_penjualan {
+  id_lokasi      Int              @id @default(autoincrement())
+  nama_lokasi    String           @unique @db.VarChar(255)
+  alamat_lokasi  String           @db.VarChar(255)
+  alokasi_produk alokasi_produk[]
+  pengiriman     pengiriman[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pemakaian_bahan {
+  id_bahan               Int
+  id_hasil               Int
+  id_varian              Int
+  jumlah_pemakaian_bahan Decimal       @db.Decimal(15, 2)
+  bahan_baku             bahan_baku    @relation(fields: [id_bahan], references: [id_bahan])
+  produksi               produksi      @relation(fields: [id_hasil], references: [id_hasil])
+  varian_produk          varian_produk @relation(fields: [id_varian], references: [id_varian])
+
+  @@id([id_bahan, id_hasil, id_varian])
+}
+
+model pembuat_donut {
+  id_pembuat_donut   Int              @id @default(autoincrement())
+  nama_pembuat_donut String           @db.VarChar(255)
+  username           String           @unique @db.VarChar(255)
+  password_hash      String           @db.VarChar(255)
+  status_registrasi  String           @db.VarChar(255)
+  alokasi_produk     alokasi_produk[]
+  bahan_baku         bahan_baku[]
+  produk             produk[]
+  produksi           produksi[]
+}
+
+model pemilik {
+  id_pemilik        Int                 @id @default(autoincrement())
+  nama_pemilik      String              @db.VarChar(255)
+  username          String              @unique @db.VarChar(255)
+  password_hash     String              @db.VarChar(255)
+  status_registrasi String              @db.VarChar(255)
+  alokasi_produk    alokasi_produk[]
+  bahan_baku        bahan_baku[]
+  laporan           laporan[]
+  penerimaan_produk penerimaan_produk[]
+  pengiriman        pengiriman[]
+  produk            produk[]
+  produksi          produksi[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model penerimaan_produk {
+  id_penerimaan     Int            @id @default(autoincrement())
+  tanggal_terima    DateTime       @db.Date
+  jumlah_diterima   Int
+  kondisi_produksi  String         @db.VarChar(100)
+  status_penerimaan String         @db.VarChar(20)
+  id_penjaga_tempat Int
+  id_pengiriman     Int            @unique
+  id_pemilik        Int
+  laporan           laporan[]
+  pemilik           pemilik        @relation(fields: [id_pemilik], references: [id_pemilik])
+  pengiriman        pengiriman     @relation(fields: [id_pengiriman], references: [id_pengiriman])
+  penjaga_tempat    penjaga_tempat @relation(fields: [id_penjaga_tempat], references: [id_penjaga_tempat])
+}
+
+model pengantar {
+  id_pengantar      Int              @id @default(autoincrement())
+  nama_pengantar    String           @db.VarChar(255)
+  username          String           @unique @db.VarChar(255)
+  password_hash     String           @db.VarChar(255)
+  status_registrasi String           @db.VarChar(255)
+  alokasi_produk    alokasi_produk[]
+  pengiriman        pengiriman[]
+  produk            produk[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pengiriman {
+  id_pengiriman     Int                @id @default(autoincrement())
+  tanggal_kirim     DateTime           @db.Date
+  jumlah_dikirim    Int
+  status_pengiriman String             @db.VarChar(20)
+  id_pengantar      Int
+  id_pemilik        Int
+  id_alokasi        Int
+  id_lokasi         Int
+  laporan           laporan[]
+  penerimaan_produk penerimaan_produk?
+  alokasi_produk    alokasi_produk     @relation(fields: [id_alokasi], references: [id_alokasi])
+  lokasi_penjualan  lokasi_penjualan   @relation(fields: [id_lokasi], references: [id_lokasi])
+  pemilik           pemilik            @relation(fields: [id_pemilik], references: [id_pemilik])
+  pengantar         pengantar          @relation(fields: [id_pengantar], references: [id_pengantar])
+}
+
+model penjaga_tempat {
+  id_penjaga_tempat   Int                 @id @default(autoincrement())
+  nama_penjaga_tempat String              @db.VarChar(255)
+  username            String              @unique @db.VarChar(255)
+  password_hash       String              @db.VarChar(255)
+  status_registrasi   String              @db.VarChar(255)
+  penerimaan_produk   penerimaan_produk[]
+  produk              produk[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model persediaan_bahan {
+  id_persediaan          Int     @id @default(autoincrement())
+  id_bahan               Int
+  id_jadwal              Int?
+  jumlah_pemakaian_bahan Decimal @db.Decimal(12, 3)
+  id_varian              Int?
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model produk {
+  id_produk         Int              @id @default(autoincrement())
+  nama_produk       String           @db.VarChar(100)
+  harga             Decimal          @db.Decimal(19, 0)
+  satuan            String           @db.VarChar(20)
+  id_pemilik        Int
+  id_pembuat_donut  Int
+  id_pengantar      Int
+  id_penjaga_tempat Int
+  alokasi_produk    alokasi_produk[]
+  pembuat_donut     pembuat_donut    @relation(fields: [id_pembuat_donut], references: [id_pembuat_donut])
+  pemilik           pemilik          @relation(fields: [id_pemilik], references: [id_pemilik])
+  pengantar         pengantar        @relation(fields: [id_pengantar], references: [id_pengantar])
+  penjaga_tempat    penjaga_tempat   @relation(fields: [id_penjaga_tempat], references: [id_penjaga_tempat])
+  produksi          produksi[]
+  varian_produk     varian_produk[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model produksi {
+  id_hasil            Int               @id @default(autoincrement())
+  tanggal_produksi    DateTime          @db.Date
+  jumlah_rencana      Int
+  jumlah_hasil        Int
+  jumlah_rusak        Int
+  keterangan_kualitas String?           @db.VarChar(255)
+  id_rencana          Int               @unique
+  id_pemilik          Int
+  id_produk           Int
+  id_pembuat_donut    Int
+  alokasi_produk      alokasi_produk[]
+  detail_produksi     detail_produksi[]
+  laporan             laporan[]
+  pemakaian_bahan     pemakaian_bahan[]
+  pembuat_donut       pembuat_donut     @relation(fields: [id_pembuat_donut], references: [id_pembuat_donut])
+  pemilik             pemilik           @relation(fields: [id_pemilik], references: [id_pemilik])
+  produk              produk            @relation(fields: [id_produk], references: [id_produk])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model transaksi {
+  id_transaksi Int      @id @default(autoincrement())
+  id_user      Int
+  nama_barang  String   @db.VarChar(100)
+  jumlah       Int
+  harga_satuan Decimal  @db.Decimal(12, 2)
+  tanggal      DateTime @default(now()) @db.Timestamp(6)
+  users        users    @relation(fields: [id_user], references: [id_user])
+}
+
+model users {
+  id_user   Int         @id @default(autoincrement())
+  nama      String      @db.VarChar(100)
+  username  String      @unique @db.VarChar(50)
+  role      String      @db.VarChar(20)
+  transaksi transaksi[]
+}
+
+model varian_produk {
+  id_varian       Int               @id @default(autoincrement())
+  nama_varian     String            @unique @db.VarChar(50)
+  id_produk       Int
+  alokasi_produk  alokasi_produk[]
+  detail_produksi detail_produksi[]
+  pemakaian_bahan pemakaian_bahan[]
+  produk          produk            @relation(fields: [id_produk], references: [id_produk])
+}
