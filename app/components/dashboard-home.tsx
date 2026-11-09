@@ -8,8 +8,10 @@ import {
 
 export default function DashboardHome({
   config,
+  accountName,
 }: {
   config: DashboardConfig;
+  accountName: string;
 }) {
   const navigation: DashboardNavigationItem[] = [
     { id: "beranda", label: "Beranda", href: dashboardHref(config.role) },
@@ -26,6 +28,7 @@ export default function DashboardHome({
       homeHref={dashboardHref(config.role)}
       navigation={navigation}
       stakeholder={config.label}
+      accountName={accountName}
       theme={config.theme}
     >
       <section className="dashboard-home-panel">

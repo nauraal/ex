@@ -12,9 +12,11 @@ import {
 export default function DashboardScreen({
   config,
   screen,
+  accountName,
 }: {
   config: DashboardConfig;
   screen: DemoScreen;
+  accountName: string;
 }) {
   const activeModule = config.modules.find(
     (module) => module.id === screen.menuId,
@@ -47,6 +49,7 @@ export default function DashboardScreen({
       homeHref={dashboardHref(config.role)}
       navigation={navigation}
       stakeholder={config.label}
+      accountName={accountName}
       theme={config.theme}
     >
       <section className="dashboard-home-panel dashboard-screen-panel">

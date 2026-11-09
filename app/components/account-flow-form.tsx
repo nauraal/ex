@@ -3,36 +3,61 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
-import type { StakeholderId } from "../../lib/stakeholders";
+import { useState, type FormEvent } from "react";
 
 type AccountFlowFormProps = {
-  role: StakeholderId;
-  stakeholder: string;
   mode: "register" | "recovery";
 };
 
 export default function AccountFlowForm({
-  role,
-  stakeholder,
   mode,
 }: AccountFlowFormProps) {
   const router = useRouter();
   const isRegistration = mode === "register";
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push(
-      isRegistration
-        ? `/register/success?role=${role}`
-        : `/recovery/sent?role=${role}`,
-    );
+    setMessage("");
+
+    if (!isRegistration) {
+      router.push("/recovery/sent");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const formData = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nama: formData.get("full-name"),
+          username: formData.get("register-username"),
+          password: formData.get("register-password"),
+          role: formData.get("register-role"),
+        }),
+      });
+      const result: { message?: string } = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.message ?? "Pendaftaran gagal. Periksa kembali data Anda.");
+        return;
+      }
+
+      router.push("/register/success");
+    } catch {
+      setMessage("Tidak dapat menghubungi server. Coba lagi nanti.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <main className="login-page account-flow-page">
       <section className="login-panel" aria-labelledby="account-brand-title">
-        <Link className="brand-logo-link" href="/">
+        <Link className="brand-logo-link" href="/login">
           <Image
             className="brand-logo"
             src="/zazi/logo.png"
@@ -56,8 +81,7 @@ export default function AccountFlowForm({
           </h1>
           <section className="login-card account-flow-card">
             <p className="login-role">
-              {isRegistration ? "Pendaftaran Akun" : "Pemulihan Akun"} ·{" "}
-              {stakeholder}
+              {isRegistration ? "Pendaftaran Akun" : "Pemulihan Akun"}
             </p>
             <h2 className="login-heading">
               {isRegistration ? "Daftar Akun Baru" : "Recovery Password"}
@@ -79,19 +103,28 @@ export default function AccountFlowForm({
                       placeholder="Buat username"
                     />
                     <AccountField
-                      autoComplete="email"
-                      id="register-email"
-                      label="Email"
-                      placeholder="nama@email.com"
-                      type="email"
-                    />
-                    <AccountField
                       autoComplete="new-password"
                       id="register-password"
                       label="Kata Sandi"
                       placeholder="Buat kata sandi"
                       type="password"
                     />
+                    <div className="field-group">
+                      <label className="field-label" htmlFor="register-role">
+                        Daftar sebagai
+                      </label>
+                      <select
+                        className="login-input"
+                        defaultValue="pembuat_donut"
+                        id="register-role"
+                        name="register-role"
+                        required
+                      >
+                        <option value="pembuat_donut">Pembuat Donut</option>
+                        <option value="pengantar">Pengantar</option>
+                        <option value="penjaga_tempat">Penjaga Tempat</option>
+                      </select>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -113,19 +146,24 @@ export default function AccountFlowForm({
               </div>
               <div className="login-actions account-flow-actions">
                 <button className="login-action" type="submit">
-                  {isRegistration ? "DAFTAR" : "KIRIM"}
+                  {isSubmitting
+                    ? "MEMPROSES..."
+                    : isRegistration
+                      ? "DAFTAR"
+                      : "KIRIM"}
                 </button>
-                <Link
-                  className="register-action"
-                  href={`/login?role=${role}`}
-                >
+                <Link className="register-action" href="/login">
                   KEMBALI KE LOGIN
                 </Link>
               </div>
+              <p
+                className="login-demo-message"
+                role={message ? "alert" : undefined}
+                aria-live="polite"
+              >
+                {message}
+              </p>
             </form>
-            <Link className="login-back" href="/">
-              Ganti stakeholder
-            </Link>
           </section>
         </div>
       </section>

@@ -1503,6 +1503,23 @@ button {
   text-decoration: none;
 }
 
+.dashboard-logout-button {
+  padding: 9px 23px;
+  border: 1.5px solid var(--dashboard-accent);
+  border-radius: 24px;
+  background: #fff;
+  color: var(--dashboard-accent);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-logout-button:hover {
+  background: var(--dashboard-accent);
+  color: #fff;
+  text-decoration: none;
+}
+
 .dashboard-content {
   width: 100%;
   max-width: 1480px;
@@ -2228,6 +2245,10 @@ button {
   color: #806b70;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 10px;
+}
+
+.login-demo-message:not(:empty) {
+  color: #a51f36;
   text-align: center;
 }
 

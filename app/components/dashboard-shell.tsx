@@ -6,8 +6,11 @@ import type {
   DashboardTheme,
 } from "../../lib/dashboard-config";
 
+import LogoutButton from "./logout-button";
+
 type DashboardShellProps = {
   stakeholder: string;
+  accountName: string;
   navigation: DashboardNavigationItem[];
   activeItem: string;
   theme: DashboardTheme;
@@ -17,6 +20,7 @@ type DashboardShellProps = {
 
 export default function DashboardShell({
   stakeholder,
+  accountName,
   navigation,
   activeItem,
   theme,
@@ -64,13 +68,11 @@ export default function DashboardShell({
               {stakeholder.charAt(0)}
             </span>
             <span>
-              <strong>{stakeholder === "Pemilik" ? "Pemilik Zazi" : "Username"}</strong>
+              <strong>{accountName}</strong>
               <small>{stakeholder}</small>
             </span>
           </div>
-          <Link className="dashboard-switch-role" href="/">
-            Keluar
-          </Link>
+          <LogoutButton />
         </header>
         <main className="dashboard-content">{children}</main>
       </div>

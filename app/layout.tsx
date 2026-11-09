@@ -10,7 +10,7 @@ const arapey = localFont({
 
 export const metadata: Metadata = {
   title: "Zazi Donut",
-  description: "Pilih peran stakeholder untuk melanjutkan ke Zazi Donut.",
+  description: "Sistem Informasi Produksi dan Distribusi Zazi Donut.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

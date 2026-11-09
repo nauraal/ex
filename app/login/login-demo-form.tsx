@@ -4,28 +4,47 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import type { StakeholderId } from "../../lib/stakeholders";
 
-export default function LoginDemoForm({
-  role,
-  stakeholder,
-}: {
-  role: StakeholderId;
-  stakeholder: string;
-}) {
+export default function LoginDemoForm() {
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function signIn(event: FormEvent<HTMLFormElement>) {
+  async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage("Mode demonstrasi: membuka halaman sesuai stakeholder.");
-    router.push(
-      role === "pemilik"
-        ? "/pemilik"
-        : role === "pengguna"
-          ? "/pengguna/beranda"
-          : `/dashboard/${role}`,
-    );
+    setMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: formData.get("username"),
+          password: formData.get("password"),
+        }),
+      });
+      const result: { message?: string; redirectTo?: string } =
+        await response.json();
+
+      if (!response.ok) {
+        setMessage(result.message ?? "Login gagal. Periksa kembali data Anda.");
+        return;
+      }
+
+      if (!result.redirectTo) {
+        setMessage("Respons login tidak valid. Silakan coba kembali.");
+        return;
+      }
+
+      router.replace(result.redirectTo);
+      router.refresh();
+    } catch {
+      setMessage("Tidak dapat menghubungi server. Coba lagi nanti.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -51,8 +70,7 @@ export default function LoginDemoForm({
           <h1 className="brand-title" id="brand-title">
             ZAZI DONUT
           </h1>
-          <section className="login-card" aria-label={`Login ${stakeholder}`}>
-            <p className="login-role">Masuk sebagai {stakeholder}</p>
+          <section className="login-card" aria-label="Login Zazi Donut">
             <h2 className="login-heading">
               Sistem Informasi Produksi dan Distribusi
             </h2>
@@ -68,6 +86,7 @@ export default function LoginDemoForm({
                     id="username"
                     name="username"
                     placeholder="Masukkan username"
+                    required
                     type="text"
                   />
                 </div>
@@ -78,7 +97,7 @@ export default function LoginDemoForm({
                     </label>
                     <Link
                       className="recovery-action"
-                      href={`/recovery?role=${role}`}
+                      href="/recovery"
                     >
                       Recovery Password
                     </Link>
@@ -89,28 +108,34 @@ export default function LoginDemoForm({
                     id="password"
                     name="password"
                     placeholder="Masukkan kata sandi"
+                    required
                     type="password"
                   />
                 </div>
               </div>
               <div className="login-actions">
-                <button className="login-action" type="submit">
-                  MASUK
+                <button
+                  className="login-action"
+                  disabled={isSubmitting}
+                  type="submit"
+                >
+                  {isSubmitting ? "MEMPROSES..." : "MASUK"}
                 </button>
                 <Link
                   className="register-action"
-                  href={`/register?role=${role}`}
+                  href="/register"
                 >
                   DAFTAR AKUN BARU
                 </Link>
               </div>
-              <p className="login-demo-message" aria-live="polite">
+              <p
+                className="login-demo-message"
+                role={message ? "alert" : undefined}
+                aria-live="polite"
+              >
                 {message}
               </p>
             </form>
-            <Link className="login-back" href="/">
-              Ganti stakeholder
-            </Link>
           </section>
         </div>
       </section>

@@ -5,6 +5,9 @@ import {
   getDashboardConfig,
   getDashboardScreen,
 } from "../../../../lib/dashboard-config";
+import { requireDashboardRole } from "../../../../lib/auth";
+
+export const instant = false;
 
 export function generateStaticParams() {
   return dashboardScreenStaticParams();
@@ -20,6 +23,9 @@ export default async function DashboardModulePage({
   const screen = getDashboardScreen(role, slug);
 
   if (!config || !screen) notFound();
+  const user = await requireDashboardRole(config.role);
 
-  return <DashboardScreen config={config} screen={screen} />;
+  return (
+    <DashboardScreen accountName={user.nama} config={config} screen={screen} />
+  );
 }
