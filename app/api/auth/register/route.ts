@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
+import { withPrismaTransaction } from "../../../../lib/prisma";
 
 const REGISTRATION_ROLES = [
   "pembuat_donut",
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
   const nama = body.nama.trim();
   const username = body.username.trim();
   const password = body.password;
+  const role = body.role;
   if (
     nama.length === 0 ||
     nama.length > 255 ||
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
     username.length > 100 ||
     password.length === 0 ||
     new TextEncoder().encode(password).byteLength > 72 ||
-    !isRegistrationRole(body.role)
+    !isRegistrationRole(role)
   ) {
     return NextResponse.json(
       { message: "Data pendaftaran tidak valid." },
@@ -73,15 +74,24 @@ export async function POST(request: Request) {
 
   try {
     const passwordHash = await bcrypt.hash(password, 12);
-    await prisma.users.create({
-      data: {
-        nama,
-        username,
-        password_hash: passwordHash,
-        role: body.role,
-        status_registrasi: "menunggu_verifikasi",
-      },
-      select: { id_user: true },
+    await withPrismaTransaction(async (transaction) => {
+      const user = await transaction.users.create({
+        data: {
+          nama,
+          username,
+          password_hash: passwordHash,
+          role,
+          status_registrasi: "menunggu_verifikasi",
+        },
+        select: { id_user: true },
+      });
+
+      await transaction.riwayat_registrasi.create({
+        data: {
+          id_user: user.id_user,
+          status_registrasi: "menunggu_verifikasi",
+        },
+      });
     });
 
     return NextResponse.json(

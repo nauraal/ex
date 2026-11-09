@@ -40,6 +40,7 @@ model bahan_baku {
   pembuat_donut    pembuat_donut     @relation(fields: [id_pembuat_donut], references: [id_pembuat_donut])
   pemilik          pemilik           @relation(fields: [id_pemilik], references: [id_pemilik])
   pemakaian_bahan  pemakaian_bahan[]
+  stok_bahan       stok_bahan?
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -115,6 +116,7 @@ model pembuat_donut {
   bahan_baku         bahan_baku[]
   produk             produk[]
   produksi           produksi[]
+  rencana_produksi   rencana_produksi[]
 }
 
 model pemilik {
@@ -130,6 +132,7 @@ model pemilik {
   pengiriman        pengiriman[]
   produk            produk[]
   produksi          produksi[]
+  rencana_produksi  rencana_produksi[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -212,6 +215,7 @@ model produk {
   pengantar         pengantar        @relation(fields: [id_pengantar], references: [id_pengantar])
   penjaga_tempat    penjaga_tempat   @relation(fields: [id_penjaga_tempat], references: [id_penjaga_tempat])
   produksi          produksi[]
+  rencana_produksi  rencana_produksi[]
   varian_produk     varian_produk[]
 }
 
@@ -234,6 +238,40 @@ model produksi {
   pembuat_donut       pembuat_donut     @relation(fields: [id_pembuat_donut], references: [id_pembuat_donut])
   pemilik             pemilik           @relation(fields: [id_pemilik], references: [id_pemilik])
   produk              produk            @relation(fields: [id_produk], references: [id_produk])
+  rencana             rencana_produksi  @relation(fields: [id_rencana], references: [id_rencana], onDelete: Restrict)
+}
+
+model rencana_produksi {
+  id_rencana         Int               @id @default(autoincrement())
+  tanggal_produksi   DateTime          @db.Date
+  status_rencana     String            @default("menunggu") @db.VarChar(30)
+  catatan            String?           @db.Text
+  jumlah_rencana     Int
+  id_produk          Int
+  id_varian          Int
+  id_pemilik         Int
+  id_pembuat_donut   Int
+  pemilik            pemilik           @relation(fields: [id_pemilik], references: [id_pemilik], onDelete: Restrict)
+  pembuat_donut      pembuat_donut     @relation(fields: [id_pembuat_donut], references: [id_pembuat_donut], onDelete: Restrict)
+  produk             produk            @relation(fields: [id_produk], references: [id_produk], onDelete: Restrict)
+  varian_produk      varian_produk     @relation(fields: [id_varian], references: [id_varian], onDelete: Restrict)
+  produksi           produksi?
+
+  @@index([tanggal_produksi, status_rencana])
+}
+
+model stok_bahan {
+  id_bahan       Int      @id
+  jumlah_stok    Decimal  @default(0) @db.Decimal(15, 3)
+  diperbarui_pada DateTime @updatedAt @db.Timestamptz(6)
+  bahan_baku     bahan_baku @relation(fields: [id_bahan], references: [id_bahan], onDelete: Restrict)
+}
+
+model stok_produk {
+  id_varian       Int          @id
+  jumlah_stok     Int          @default(0)
+  diperbarui_pada DateTime     @updatedAt @db.Timestamptz(6)
+  varian_produk   varian_produk @relation(fields: [id_varian], references: [id_varian], onDelete: Restrict)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -254,7 +292,21 @@ model users {
   password_hash    String      @db.VarChar(255)
   role             String      @db.VarChar(30)
   status_registrasi String     @default("aktif") @db.VarChar(30)
-  transaksi        transaksi[]
+  riwayat_registrasi  riwayat_registrasi[] @relation("registration_subject")
+  riwayat_diproses    riwayat_registrasi[] @relation("registration_processor")
+  transaksi           transaksi[]
+}
+
+model riwayat_registrasi {
+  id_riwayat        Int      @id @default(autoincrement())
+  id_user           Int
+  status_registrasi String   @db.VarChar(30)
+  diproses_oleh     Int?
+  waktu_perubahan   DateTime @default(now()) @db.Timestamptz(6)
+  pengguna          users    @relation("registration_subject", fields: [id_user], references: [id_user], onDelete: Restrict)
+  pemroses          users?   @relation("registration_processor", fields: [diproses_oleh], references: [id_user], onDelete: Restrict)
+
+  @@index([id_user, waktu_perubahan])
 }
 
 model varian_produk {
@@ -269,4 +321,6 @@ model varian_produk {
   detail_produksi     detail_produksi[]
   pemakaian_bahan     pemakaian_bahan[]
   produk              produk            @relation(fields: [id_produk], references: [id_produk])
+  rencana_produksi    rencana_produksi[]
+  stok_produk         stok_produk?
 }

@@ -20,7 +20,24 @@ export type DemoRow = {
   href: string;
   date?: string;
   actionLabel?: string;
-  actions?: { label: string; href: string }[];
+  actions?: {
+    label: string;
+    href: string;
+    registrationDecision?: "aktif" | "ditolak";
+    userId?: number;
+    accountId?: number;
+    accountName?: string;
+    accountUsername?: string;
+    accountStatus?: string;
+    planId?: number;
+    planDate?: string;
+    planQuantity?: number;
+    planNote?: string | null;
+    stockVariantId?: number;
+    stockQuantity?: number;
+    rawMaterialId?: number;
+    rawMaterialQuantity?: string;
+  }[];
 };
 
 export type DemoField = {
@@ -94,235 +111,58 @@ const ownerScreens: DemoScreen[] = [
     description: "Periksa dan tindak lanjuti permintaan akun mitra.",
     kind: "table",
     columns: ["No.", "Nama", "Username", "Jenis Stakeholder", "Status", "Aksi"],
-    rows: [
-      {
-        ...row(["1", "Rina Kurnia", "rina.k", "Penjaga Tempat", "Menunggu"], "registrasi-detail"),
-        actions: [
-          { label: "Lihat", href: "registrasi-detail" },
-          { label: "Setujui", href: "registrasi-setuju" },
-          { label: "Tolak", href: "registrasi-tolak" },
-        ],
-      },
-      {
-        ...row(["2", "Dimas Saputra", "dimas.s", "Pengantar", "Menunggu"], "registrasi-detail"),
-        actions: [
-          { label: "Lihat", href: "registrasi-detail" },
-          { label: "Setujui", href: "registrasi-setuju" },
-          { label: "Tolak", href: "registrasi-tolak" },
-        ],
-      },
-      {
-        ...row(["3", "Sari Wulandari", "sari.w", "Penjaga Tempat", "Menunggu"], "registrasi-detail"),
-        actions: [
-          { label: "Lihat", href: "registrasi-detail" },
-          { label: "Setujui", href: "registrasi-setuju" },
-          { label: "Tolak", href: "registrasi-tolak" },
-        ],
-      },
-    ],
+    rows: [],
     tabs: [
       { label: "Permintaan Registrasi", href: "verifikasi" },
       { label: "Data Pengguna", href: "pengguna" },
-    ],
-    primaryAction: { label: "Tambah Pengguna", href: "pengguna-form" },
-  },
-  {
-    slug: "registrasi-detail",
-    menuId: "verifikasi",
-    title: "Detail Permintaan Registrasi",
-    description: "Tinjau data pendaftar sebelum menyetujui permintaan.",
-    kind: "detail",
-    backHref: "verifikasi",
-    details: [
-      { label: "Nama lengkap", value: "Rina Kurnia" },
-      { label: "Username", value: "rina.k" },
-      { label: "Jenis stakeholder", value: "Penjaga Tempat" },
-      { label: "Nomor telepon", value: "0812-3456-7890" },
-      { label: "Lokasi", value: "Zazi Donut - Bandung" },
-      { label: "Status registrasi", value: "Menunggu verifikasi" },
-    ],
-    primaryAction: { label: "Verifikasi permintaan", href: "registrasi-form" },
-    secondaryAction: { label: "Tolak Permintaan", href: "registrasi-tolak" },
-    note: "Data contoh untuk demonstrasi. Persetujuan tidak disimpan ke server.",
-  },
-  {
-    slug: "registrasi-form",
-    menuId: "verifikasi",
-    title: "Verifikasi Data Pengguna",
-    description: "Lengkapi keputusan verifikasi untuk akun yang dipilih.",
-    kind: "form",
-    backHref: "registrasi-detail",
-    fields: [
-      field("nama", "Nama Lengkap", "text", "Nama lengkap pengguna"),
-      field("username", "Username", "text", "Username"),
-      field("stakeholder", "Stakeholder", "select", undefined, [
-        "Pembuat Donut",
-        "Pengantar",
-        "Penjaga Tempat",
-      ]),
-      field("status", "Keputusan Verifikasi", "select", undefined, [
-        "Disetujui",
-        "Ditolak",
-      ]),
-      field("catatan", "Catatan", "textarea", "Catatan verifikasi"),
-    ],
-    note: "Perubahan hanya disimulasikan di browser.",
-  },
-  {
-    slug: "registrasi-setuju",
-    menuId: "verifikasi",
-    title: "Konfirmasi Persetujuan Registrasi",
-    description: "Permintaan registrasi disetujui dalam simulasi ini.",
-    kind: "detail",
-    backHref: "verifikasi",
-    details: [
-      { label: "Pendaftar", value: "Rina Kurnia" },
-      { label: "Status terbaru", value: "Disetujui" },
-      { label: "Informasi", value: "Persetujuan tidak disimpan ke server." },
-    ],
-  },
-  {
-    slug: "registrasi-tolak",
-    menuId: "verifikasi",
-    title: "Konfirmasi Penolakan Registrasi",
-    description: "Permintaan registrasi ditolak dalam simulasi ini.",
-    kind: "detail",
-    backHref: "verifikasi",
-    details: [
-      { label: "Pendaftar", value: "Rina Kurnia" },
-      { label: "Status terbaru", value: "Ditolak" },
-      { label: "Informasi", value: "Tidak ada perubahan akun yang disimpan." },
+      { label: "Riwayat Registrasi", href: "registrasi-riwayat" },
     ],
   },
   {
     slug: "pengguna",
     menuId: "verifikasi",
     title: "Data Pengguna",
-    description: "Daftar akun stakeholder pada sistem demonstrasi.",
+    description: "Daftar akun stakeholder yang tersimpan di database.",
     kind: "table",
     columns: ["No.", "Nama", "Username", "Stakeholder", "Status", "Aksi"],
-    rows: [
-      {
-        ...row(["1", "Rina Kurnia", "rina.k", "Penjaga Tempat", "Aktif"], "pengguna-detail"),
-        actions: [
-          { label: "Lihat", href: "pengguna-detail" },
-          { label: "Ubah", href: "pengguna-edit" },
-          { label: "Hapus", href: "pengguna-hapus" },
-        ],
-      },
-      {
-        ...row(["2", "Dimas Saputra", "dimas.s", "Pengantar", "Aktif"], "pengguna-detail"),
-        actions: [
-          { label: "Lihat", href: "pengguna-detail" },
-          { label: "Ubah", href: "pengguna-edit" },
-          { label: "Hapus", href: "pengguna-hapus" },
-        ],
-      },
-      {
-        ...row(["3", "Sari Wulandari", "sari.w", "Penjaga Tempat", "Menunggu"], "pengguna-detail"),
-        actions: [
-          { label: "Lihat", href: "pengguna-detail" },
-          { label: "Ubah", href: "pengguna-edit" },
-          { label: "Hapus", href: "pengguna-hapus" },
-        ],
-      },
-      {
-        ...row(["4", "Andi Pratama", "andi.p", "Pembuat Donut", "Aktif"], "pengguna-detail"),
-        actions: [
-          { label: "Lihat", href: "pengguna-detail" },
-          { label: "Ubah", href: "pengguna-edit" },
-          { label: "Hapus", href: "pengguna-hapus" },
-        ],
-      },
-    ],
+    rows: [],
     tabs: [
       { label: "Permintaan Registrasi", href: "verifikasi" },
       { label: "Data Pengguna", href: "pengguna" },
+      { label: "Riwayat Registrasi", href: "registrasi-riwayat" },
     ],
     primaryAction: { label: "Tambah Pengguna", href: "pengguna-form" },
   },
   {
-    slug: "pengguna-detail",
+    slug: "registrasi-riwayat",
     menuId: "verifikasi",
-    title: "Detail Data Pengguna",
-    description: "Tinjau identitas dan status akun stakeholder.",
-    kind: "detail",
-    backHref: "pengguna",
-    details: [
-      { label: "Nama lengkap", value: "Rina Kurnia" },
-      { label: "Username", value: "rina.k" },
-      { label: "Stakeholder", value: "Penjaga Tempat" },
-      { label: "Status registrasi", value: "Aktif" },
+    title: "Riwayat Registrasi",
+    description: "Status registrasi, waktu perubahan, dan pemroses dari database.",
+    kind: "table",
+    columns: [
+      "No.",
+      "Nama",
+      "Username",
+      "Stakeholder",
+      "Status",
+      "Waktu",
+      "Diproses oleh",
+      "Aksi",
     ],
-    primaryAction: { label: "Edit Pengguna", href: "pengguna-edit" },
-    secondaryAction: { label: "Hapus Pengguna", href: "pengguna-hapus" },
+    rows: [],
+    tabs: [
+      { label: "Permintaan Registrasi", href: "verifikasi" },
+      { label: "Data Pengguna", href: "pengguna" },
+      { label: "Riwayat Registrasi", href: "registrasi-riwayat" },
+    ],
   },
   {
     slug: "pengguna-form",
     menuId: "verifikasi",
     title: "Tambah Pengguna",
-    description: "Buat data akun contoh untuk demonstrasi.",
+    description: "Buat akun pengguna yang tersimpan di database.",
     kind: "form",
     backHref: "pengguna",
-    fields: [
-      field("nama", "Nama Lengkap", "text", "Nama lengkap pengguna"),
-      field("username", "Username", "text", "Username"),
-      field("stakeholder", "Stakeholder", "select", undefined, [
-        "Pembuat Donut",
-        "Pengantar",
-        "Penjaga Tempat",
-      ]),
-      field("status", "Status Registrasi", "select", undefined, ["Aktif", "Menunggu Verifikasi"]),
-    ],
-  },
-  {
-    slug: "pengguna-edit",
-    menuId: "verifikasi",
-    title: "Ubah Data Pengguna",
-    description: "Perbarui data contoh pengguna untuk demonstrasi.",
-    kind: "form",
-    backHref: "pengguna",
-    fields: [
-      {
-        ...field("nama", "Nama Lengkap", "text", "Nama lengkap pengguna"),
-        defaultValue: "Rina Kurnia",
-      },
-      {
-        ...field("username", "Username", "text", "Username"),
-        defaultValue: "rina.k",
-      },
-      {
-        ...field("stakeholder", "Stakeholder", "select", undefined, [
-          "Pembuat Donut",
-          "Pengantar",
-          "Penjaga Tempat",
-        ]),
-        defaultValue: "Penjaga Tempat",
-      },
-      {
-        ...field("status", "Status Registrasi", "select", undefined, [
-          "Aktif",
-          "Menunggu Verifikasi",
-        ]),
-        defaultValue: "Aktif",
-      },
-    ],
-    submitLabel: "Simpan Perubahan",
-  },
-  {
-    slug: "pengguna-hapus",
-    menuId: "verifikasi",
-    title: "Konfirmasi Hapus Pengguna",
-    description: "Akun contoh dihapus hanya dalam simulasi demonstrasi.",
-    kind: "detail",
-    backHref: "pengguna",
-    details: [
-      { label: "Pengguna", value: "Rina Kurnia (rina.k)" },
-      { label: "Status", value: "Siap dihapus dari tampilan demo" },
-    ],
-    primaryAction: { label: "Konfirmasi Hapus", href: "pengguna" },
-    secondaryAction: { label: "Batalkan", href: "pengguna" },
-    note: "Tidak ada data yang dihapus dari server atau database.",
   },
   {
     slug: "produk",
@@ -349,11 +189,7 @@ const ownerScreens: DemoScreen[] = [
     description: "Jadwal produksi donat yang perlu disiapkan.",
     kind: "table",
     columns: ["No.", "Kode Rencana", "Tanggal Produksi", "Produk", "Jumlah", "Status", "Aksi"],
-    rows: [
-      row(["1", "RP-001", "12/06/2026", "Donut Cheese", "120 pcs", "Menunggu"], "rencana-form"),
-      row(["2", "RP-002", "13/06/2026", "Donut Chocolate", "100 pcs", "Disetujui"], "rencana-form"),
-      row(["3", "RP-003", "14/06/2026", "Donut Strawberry", "80 pcs", "Menunggu"], "rencana-form"),
-    ],
+    rows: [],
     primaryAction: { label: "Tambah Rencana", href: "rencana-form" },
   },
   {
@@ -382,12 +218,10 @@ const ownerScreens: DemoScreen[] = [
     description: "Kelola kebutuhan bahan untuk rencana produksi.",
     kind: "table",
     columns: ["No.", "Nama Bahan", "Rencana Produksi", "Kebutuhan", "Satuan", "Aksi"],
-    rows: [
-      row(["1", "Tepung Terigu", "RP-001", "10", "kg"], "bahan-form"),
-      row(["2", "Gula", "RP-001", "3", "kg"], "bahan-form"),
-      row(["3", "Keju", "RP-001", "2", "kg"], "bahan-form"),
-    ],
+    rows: [],
     primaryAction: { label: "Tambah Kebutuhan", href: "bahan-form" },
+    secondaryAction: { label: "Stok Bahan Baku", href: "bahan-stok" },
+    relatedLinks: [{ label: "Tambah Bahan Baku", href: "bahan-material-form" }],
   },
   {
     slug: "bahan-form",
@@ -404,24 +238,38 @@ const ownerScreens: DemoScreen[] = [
     ],
   },
   {
+    slug: "bahan-material-form",
+    menuId: "bahan",
+    title: "Tambah Bahan Baku",
+    description: "Tambahkan bahan baku yang digunakan pada produksi.",
+    kind: "form",
+    backHref: "bahan",
+  },
+  {
+    slug: "bahan-stok",
+    menuId: "bahan",
+    title: "Stok Bahan Baku",
+    description: "Saldo bahan baku aktual yang tersimpan di database.",
+    kind: "table",
+    columns: ["No.", "Nama Bahan", "Stok", "Satuan", "Status", "Aksi"],
+    rows: [],
+    backHref: "bahan",
+  },
+  {
     slug: "stok",
     menuId: "stok",
     title: "Stok Produk",
     description: "Pantau jumlah produk yang tersedia.",
     kind: "table",
+    primaryAction: { label: "Ubah Stok", href: "stok-form" },
     columns: ["No.", "Kode Produk", "Nama Produk", "Varian", "Jumlah Stok", "Aksi"],
-    rows: [
-      row(["1", "P-001", "Donut", "Cheese", "48 pcs"], "stok-form"),
-      row(["2", "P-002", "Donut", "Chocolate", "36 pcs"], "stok-form"),
-      row(["3", "P-003", "Donut", "Strawberry", "24 pcs"], "stok-form"),
-    ],
-    primaryAction: { label: "Tambah Stok", href: "stok-form" },
+    rows: [],
   },
   {
     slug: "stok-form",
     menuId: "stok",
     title: "Tambah Stok Produk",
-    description: "Catat stok produk untuk keperluan prototipe.",
+    description: "Sesuaikan saldo stok produk yang tersimpan di database.",
     kind: "form",
     backHref: "stok",
     fields: [
@@ -437,11 +285,9 @@ const ownerScreens: DemoScreen[] = [
     title: "Alokasi Produk",
     description: "Pilih hasil produksi yang akan dikirim ke lokasi.",
     kind: "table",
-    columns: ["No.", "Kode Rencana", "Produk", "Jumlah Tersedia", "Tanggal", "Aksi"],
-    rows: [
-      row(["1", "RP-001", "Donut Cheese", "100 pcs", "12/06/2026"], "alokasi-lokasi", "Pilih"),
-      row(["2", "RP-002", "Donut Chocolate", "80 pcs", "13/06/2026"], "alokasi-lokasi", "Pilih"),
-    ],
+    columns: ["No.", "Kode Alokasi", "Produk", "Lokasi", "Jumlah", "Tanggal", "Aksi"],
+    rows: [],
+    primaryAction: { label: "Tambah Alokasi", href: "alokasi-form" },
     secondaryAction: { label: "Riwayat Alokasi", href: "alokasi-riwayat" },
   },
   {
@@ -494,17 +340,17 @@ const ownerScreens: DemoScreen[] = [
     description: "Ringkasan rencana dan hasil produksi.",
     kind: "report",
     columns: ["No.", "Kode Rencana", "Produk", "Target", "Hasil Layak", "Produk Rusak", "Aksi"],
-    rows: [
-      {
-        ...row(["1", "RP-001", "Donut Cheese", "120 pcs", "116 pcs", "4 pcs"], "laporan-detail"),
-        date: "2026-06-12",
-      },
-      {
-        ...row(["2", "RP-002", "Donut Chocolate", "100 pcs", "100 pcs", "0 pcs"], "laporan-detail"),
-        date: "2026-06-13",
-      },
-    ],
-    note: "Gunakan filter periode untuk menampilkan laporan contoh.",
+    rows: [],
+    primaryAction: { label: "Buat Laporan", href: "laporan-form" },
+    note: "Laporan ditampilkan dari hasil produksi yang tersimpan.",
+  },
+  {
+    slug: "laporan-form",
+    menuId: "laporan",
+    title: "Buat Laporan Produksi",
+    description: "Simpan laporan untuk hasil produksi pada periode yang dipilih.",
+    kind: "form",
+    backHref: "laporan",
   },
   {
     slug: "laporan-detail",
@@ -673,6 +519,7 @@ const courierScreens: DemoScreen[] = [
     title: "Pengiriman Produk",
     description: "Daftar alokasi produk yang harus dikirim.",
     kind: "table",
+    primaryAction: { label: "Perbarui Status Pengiriman", href: "konfirmasi-pengiriman" },
     columns: ["No.", "Kode Pengiriman", "Tujuan", "Produk", "Jumlah", "Status", "Aksi"],
     rows: [
       row(["1", "AL-001", "Zazi Donut - Bandung", "Donut Cheese", "50 pcs", "Siap dikirim"], "pengiriman-detail"),
@@ -781,6 +628,7 @@ const guardScreens: DemoScreen[] = [
     title: "Menerima Produk",
     description: "Periksa daftar pengiriman produk ke lokasi.",
     kind: "table",
+    primaryAction: { label: "Konfirmasi Penerimaan", href: "konfirmasi-penerimaan" },
     columns: ["No.", "Kode Pengiriman", "Pengantar", "Produk", "Jumlah", "Tanggal", "Aksi"],
     rows: [
       row(["1", "AL-001", "Dimas Saputra", "Donut Cheese", "50 pcs", "12/06/2026"], "detail-penerimaan"),
@@ -885,11 +733,11 @@ const dashboards: Record<DashboardRole, DashboardConfig> = {
     welcome: "Selamat datang, Pemilik Zazi. Pilih menu untuk memulai.",
     modules: ownerModules,
     metrics: [
-      { label: "Registrasi menunggu", value: "3", tone: "orange" },
-      { label: "Rencana belum dicatat", value: "2", tone: "green" },
-      { label: "Produk layak belum dialokasikan", value: "180", tone: "blue" },
-      { label: "Pengiriman berjalan", value: "4", tone: "pink" },
-      { label: "Sudah diterima", value: "12", tone: "orange" },
+      { label: "Registrasi menunggu", value: "—", tone: "orange" },
+      { label: "Rencana belum dicatat", value: "—", tone: "green" },
+      { label: "Produk layak belum dialokasikan", value: "—", tone: "blue" },
+      { label: "Pengiriman berjalan", value: "—", tone: "pink" },
+      { label: "Sudah diterima", value: "—", tone: "orange" },
     ],
     screens: ownerScreens,
   },
@@ -900,9 +748,9 @@ const dashboards: Record<DashboardRole, DashboardConfig> = {
     welcome: "Selamat datang. Pilih pekerjaan produksi untuk memulai.",
     modules: makerModules,
     metrics: [
-      { label: "Rencana menunggu dicatat", value: "1", tone: "orange" },
-      { label: "Bahan baku menipis (<10)", value: "1", tone: "green" },
-      { label: "Produk rusak tercatat", value: "6", tone: "blue" },
+      { label: "Rencana menunggu dicatat", value: "—", tone: "orange" },
+      { label: "Bahan baku menipis (<10)", value: "—", tone: "green" },
+      { label: "Produk rusak tercatat", value: "—", tone: "blue" },
     ],
     screens: makerScreens,
   },
@@ -913,8 +761,8 @@ const dashboards: Record<DashboardRole, DashboardConfig> = {
     welcome: "Selamat datang. Pilih daftar pengiriman untuk melanjutkan.",
     modules: courierModules,
     metrics: [
-      { label: "Menunggu dikirim", value: "1", tone: "orange" },
-      { label: "Dikirim hari ini", value: "1", tone: "green" },
+      { label: "Menunggu dikirim", value: "—", tone: "orange" },
+      { label: "Dikirim hari ini", value: "—", tone: "green" },
     ],
     screens: courierScreens,
   },
@@ -925,9 +773,9 @@ const dashboards: Record<DashboardRole, DashboardConfig> = {
     welcome: "Selamat datang. Periksa penerimaan produk di lokasi Anda.",
     modules: guardModules,
     metrics: [
-      { label: "Pengiriman akan diterima", value: "2", tone: "orange" },
-      { label: "Diterima hari ini", value: "5", tone: "green" },
-      { label: "Total stok di lokasi", value: "90", tone: "blue" },
+      { label: "Pengiriman akan diterima", value: "—", tone: "orange" },
+      { label: "Diterima hari ini", value: "—", tone: "green" },
+      { label: "Jumlah produk pernah diterima", value: "—", tone: "blue" },
     ],
     screens: guardScreens,
   },

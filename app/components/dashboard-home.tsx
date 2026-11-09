@@ -9,9 +9,11 @@ import {
 export default function DashboardHome({
   config,
   accountName,
+  metricValues,
 }: {
   config: DashboardConfig;
   accountName: string;
+  metricValues: string[];
 }) {
   const navigation: DashboardNavigationItem[] = [
     { id: "beranda", label: "Beranda", href: dashboardHref(config.role) },
@@ -41,7 +43,7 @@ export default function DashboardHome({
         </div>
 
         <section className="dashboard-metrics" aria-label="Ringkasan data">
-          {config.metrics.map((metric) => (
+          {config.metrics.map((metric, index) => (
             <article className="metric-card" key={metric.label}>
               <span
                 className={`metric-accent-bar metric-accent-${metric.tone}`}
@@ -49,7 +51,7 @@ export default function DashboardHome({
               />
               <div>
                 <p>{metric.label}</p>
-                <strong>{metric.value}</strong>
+                <strong>{metricValues[index] ?? "—"}</strong>
               </div>
             </article>
           ))}

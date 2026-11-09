@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import DashboardShell from "../../../../components/dashboard-shell";
+import ProductManagement from "../../../../components/product-management";
 import { requireDashboardRole } from "../../../../../lib/auth";
 import {
   formatRupiah,
@@ -125,6 +126,22 @@ async function ProductVariantDetail({
             ingredients={variant.ingredients_topping}
           />
         </div>
+
+        <ProductManagement
+          variant={{
+            id_varian: variant.id_varian,
+            nama_varian: variant.nama_varian,
+            deskripsi: variant.deskripsi,
+            ingredients_donut: variant.ingredients_donut,
+            ingredients_topping: variant.ingredients_topping,
+            gambar_url: variant.gambar_url,
+            produk: {
+              nama_produk: variant.produk.nama_produk,
+              harga: variant.produk.harga.toFixed(0),
+              satuan: variant.produk.satuan,
+            },
+          }}
+        />
 
         <div className="product-detail-footer">
           <Link className="demo-button demo-button-secondary" href={backHref}>

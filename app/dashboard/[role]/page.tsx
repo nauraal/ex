@@ -5,6 +5,7 @@ import {
   getDashboardConfig,
 } from "../../../lib/dashboard-config";
 import { requireDashboardRole } from "../../../lib/auth";
+import { getDashboardMetricValues } from "../../../lib/operational-queries";
 
 export const instant = false;
 
@@ -21,6 +22,7 @@ export default async function RoleDashboardPage({
   const config = getDashboardConfig(role);
   if (!config) notFound();
   const user = await requireDashboardRole(config.role);
+  const metricValues = await getDashboardMetricValues(config.role, user.username);
 
-  return <DashboardHome accountName={user.nama} config={config} />;
+  return <DashboardHome accountName={user.nama} config={config} metricValues={metricValues} />;
 }

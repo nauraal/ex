@@ -14,7 +14,6 @@ export default function DemoForm({
   submitLabel = "Simpan",
   validation,
 }: DemoFormProps) {
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -26,15 +25,13 @@ export default function DemoForm({
       validation === "allocation" &&
       Number(formData.get("jumlah")) > allocationLimit
     ) {
-      setSubmitted(false);
       setError(
         `Jumlah alokasi melebihi kapasitas lokasi (${allocationLimit} pcs).`,
       );
       return;
     }
 
-    setError("");
-    setSubmitted(true);
+    setError("Formulir ini belum terhubung ke penyimpanan database.");
   }
 
   return (
@@ -89,11 +86,6 @@ export default function DemoForm({
         {error ? (
           <p className="demo-error" role="alert">
             {error}
-          </p>
-        ) : null}
-        {submitted ? (
-          <p className="demo-success" role="status">
-            Berhasil disimpan untuk demonstrasi. Data tidak dikirim ke server.
           </p>
         ) : null}
       </div>

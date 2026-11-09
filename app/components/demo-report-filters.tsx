@@ -82,12 +82,16 @@ export default function DemoReportFilters({
                   <td key={`${cellIndex}-${value}`}>{value}</td>
                 ))}
                 <td>
+                  {row.actionLabel === "—" ? (
+                    <span className="demo-row-link">—</span>
+                  ) : (
                   <Link
                     className="demo-row-link"
                     href={dashboardHref(role, row.href)}
                   >
                     {row.actionLabel ?? "Lihat"}
                   </Link>
+                  )}
                 </td>
               </tr>
             ))}

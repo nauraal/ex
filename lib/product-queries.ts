@@ -13,6 +13,123 @@ export type ProductFormOptions = {
   penjagaTempat: ProductAssigneeOption[];
 };
 
+export async function getRegistrationRows() {
+  const users = await prisma.users.findMany({
+    where: {
+      status_registrasi: "menunggu_verifikasi",
+      role: { in: ["pembuat_donut", "pengantar", "penjaga_tempat"] },
+    },
+    select: {
+      id_user: true,
+      nama: true,
+      username: true,
+      role: true,
+      status_registrasi: true,
+    },
+    orderBy: { id_user: "asc" },
+  });
+
+  return users.map((user, index) => ({
+    values: [
+      String(index + 1),
+      user.nama,
+      user.username,
+      formatRole(user.role),
+      formatRegistrationStatus(user.status_registrasi),
+    ],
+    href: "",
+    actions: [
+      {
+        label: "Setujui",
+        href: "",
+        registrationDecision: "aktif" as const,
+        userId: user.id_user,
+      },
+      {
+        label: "Tolak",
+        href: "",
+        registrationDecision: "ditolak" as const,
+        userId: user.id_user,
+      },
+    ],
+  }));
+}
+
+export async function getAccountRows() {
+  const users = await prisma.users.findMany({
+    select: {
+      id_user: true,
+      nama: true,
+      username: true,
+      role: true,
+      status_registrasi: true,
+    },
+    orderBy: { id_user: "asc" },
+  });
+
+  return users.map((user, index) => ({
+    values: [
+      String(index + 1),
+      user.nama,
+      user.username,
+      formatRole(user.role),
+      formatRegistrationStatus(user.status_registrasi),
+    ],
+    href: "",
+    actions:
+      user.role === "pemilik"
+        ? []
+        : [
+            {
+              label: "Kelola",
+              href: "",
+              accountId: user.id_user,
+              accountName: user.nama,
+              accountUsername: user.username,
+              accountStatus: user.status_registrasi,
+            },
+          ],
+  }));
+}
+
+export async function getRegistrationHistoryRows() {
+  const history = await prisma.riwayat_registrasi.findMany({
+    select: {
+      status_registrasi: true,
+      waktu_perubahan: true,
+      pengguna: {
+        select: {
+          nama: true,
+          username: true,
+          role: true,
+        },
+      },
+      pemroses: {
+        select: { nama: true },
+      },
+    },
+    orderBy: { waktu_perubahan: "desc" },
+  });
+
+  return history.map((entry, index) => ({
+    values: [
+      String(index + 1),
+      entry.pengguna.nama,
+      entry.pengguna.username,
+      formatRole(entry.pengguna.role),
+      formatRegistrationStatus(entry.status_registrasi),
+      entry.waktu_perubahan.toLocaleString("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Asia/Jakarta",
+      }),
+      entry.pemroses?.nama ?? "Pendaftar",
+    ],
+    href: "",
+    actionLabel: "—",
+  }));
+}
+
 export async function getProductFormOptions(): Promise<ProductFormOptions> {
   const users = await prisma.users.findMany({
     where: {
@@ -49,6 +166,7 @@ export async function getProductVariantRows() {
         select: {
           nama_produk: true,
           harga: true,
+          satuan: true,
         },
       },
     },
@@ -84,6 +202,7 @@ export async function getProductVariantDetail(id: number) {
         select: {
           nama_produk: true,
           harga: true,
+          satuan: true,
         },
       },
     },
@@ -94,4 +213,30 @@ export function formatRupiah(value: string) {
   const amount = BigInt(value);
   const formatted = amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `Rp${formatted}`;
+}
+
+function formatRole(role: string) {
+  switch (role) {
+    case "pembuat_donut":
+      return "Pembuat Donut";
+    case "pengantar":
+      return "Pengantar";
+    case "penjaga_tempat":
+      return "Penjaga Tempat";
+    default:
+      return role;
+  }
+}
+
+function formatRegistrationStatus(status: string) {
+  switch (status) {
+    case "menunggu_verifikasi":
+      return "Menunggu";
+    case "aktif":
+      return "Disetujui";
+    case "ditolak":
+      return "Ditolak";
+    default:
+      return status;
+  }
 }

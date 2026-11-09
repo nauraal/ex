@@ -35,6 +35,19 @@ registration status. `pemilik` accounts cannot be created through public
 registration and must be provisioned through an authorized administrative
 process.
 
+## Registration decision history
+
+The owner registration screen stores approval/rejection decisions and their
+processor and timestamp in `riwayat_registrasi`. Before deploying this change,
+verify `DATABASE_URL` points to the intended PostgreSQL database and apply the
+additive SQL migration:
+
+```bash
+npm exec -- prisma db execute --file=prisma/migrations/20261109225000_add_registration_history/migration.sql
+```
+
+The migration does not reset or delete existing data.
+
 ## Product variant details
 
 The owner's product list and detail pages read `produk` and `varian_produk`
@@ -60,6 +73,25 @@ store-guard assignments. When saving, the API synchronizes each selected active
 missing, then creates the product and variant atomically. Generated profile
 password hashes are unusable random hashes; authentication continues to read
 only from `users`.
+
+## Operational data
+
+Planning, production results, raw-material stock and use, product stock,
+allocations, shipping, receipts, and production reports are stored in their
+corresponding PostgreSQL tables through role-checked Route Handlers. Dashboard
+tables and summary metrics query the signed-in user's operational assignments;
+unconnected legacy forms are not presented as saved data.
+
+The additive planning and stock schema is in
+`prisma/migrations/20261109235500_add_operational_planning_and_stock/migration.sql`.
+For an existing database without Prisma migration history, verify that
+`DATABASE_URL` targets the intended Neon database before applying this SQL
+with Prisma `db execute`. Do not reset or force-push the database. Transaction
+operations use an extended wait window to accommodate Neon connection wake-up.
+
+For Vercel, configure `DATABASE_URL` and `SESSION_SECRET` in the Production
+environment, then verify the target database schema before deploying. Local
+environment variables do not configure Vercel.
 
 ## Project checks
 

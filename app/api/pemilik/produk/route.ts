@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../../../lib/auth";
-import { prisma } from "../../../../lib/prisma";
+import { prisma, withPrismaTransaction } from "../../../../lib/prisma";
 
 const ASSIGNEE_ROLES = [
   "pembuat_donut",
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         createUnavailablePasswordHash(),
       ]);
 
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await withPrismaTransaction(async (tx) => {
       const ownerProfile = await tx.pemilik.upsert({
         where: { username: owner.username },
         update: {
