@@ -15,6 +15,7 @@ type DashboardShellProps = {
   activeItem: string;
   theme: DashboardTheme;
   homeHref: string;
+  brandSubtitle?: string;
   children: ReactNode;
 };
 
@@ -25,6 +26,7 @@ export default function DashboardShell({
   activeItem,
   theme,
   homeHref,
+  brandSubtitle = "Sistem Informasi",
   children,
 }: DashboardShellProps) {
   return (
@@ -40,7 +42,7 @@ export default function DashboardShell({
           />
           <span>
             <strong>ZAZI DONUT</strong>
-            <small>Sistem Informasi</small>
+            <small>{brandSubtitle}</small>
           </span>
         </Link>
 

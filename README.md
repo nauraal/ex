@@ -26,6 +26,32 @@ registration status. `pemilik` accounts cannot be created through public
 registration and must be provisioned through an authorized administrative
 process.
 
+## Product variant details
+
+The owner's product list and detail pages read `produk` and `varian_produk`
+from PostgreSQL. The detail URL identifies a variant by its `id_varian`.
+Optional detail metadata is stored on `varian_produk`: `deskripsi`,
+`ingredients_donut`, `ingredients_topping`, and `gambar_url`. Enter ingredients
+as one item per line; `gambar_url` accepts a root-relative public asset path or
+an HTTP(S) URL. When these optional values are empty, the page displays an
+availability message and uses the existing general donut illustration.
+
+The additive SQL is in
+`prisma/migrations/20261109144223_add_variant_product_metadata/migration.sql`.
+For a database whose `varian_produk` table already exists, apply it with:
+
+```bash
+npx prisma db execute --config prisma7.config.ts --file prisma/migrations/20261109144223_add_variant_product_metadata/migration.sql
+npx prisma generate --config prisma7.config.ts
+```
+
+The owner product form lists active users for the required maker, courier, and
+store-guard assignments. When saving, the API synchronizes each selected active
+`users` account to its matching legacy operational profile if that profile is
+missing, then creates the product and variant atomically. Generated profile
+password hashes are unusable random hashes; authentication continues to read
+only from `users`.
+
 ## Project checks
 
 ```bash

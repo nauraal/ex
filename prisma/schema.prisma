@@ -258,11 +258,15 @@ model users {
 }
 
 model varian_produk {
-  id_varian       Int               @id @default(autoincrement())
-  nama_varian     String            @unique @db.VarChar(50)
-  id_produk       Int
-  alokasi_produk  alokasi_produk[]
-  detail_produksi detail_produksi[]
-  pemakaian_bahan pemakaian_bahan[]
-  produk          produk            @relation(fields: [id_produk], references: [id_produk])
+  id_varian           Int               @id @default(autoincrement())
+  nama_varian         String            @unique @db.VarChar(50)
+  id_produk           Int
+  deskripsi           String?           @db.Text
+  ingredients_donut   String?           @db.Text
+  ingredients_topping String?           @db.Text
+  gambar_url          String?           @db.VarChar(500)
+  alokasi_produk      alokasi_produk[]
+  detail_produksi     detail_produksi[]
+  pemakaian_bahan     pemakaian_bahan[]
+  produk              produk            @relation(fields: [id_produk], references: [id_produk])
 }

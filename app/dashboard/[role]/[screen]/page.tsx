@@ -6,6 +6,10 @@ import {
   getDashboardScreen,
 } from "../../../../lib/dashboard-config";
 import { requireDashboardRole } from "../../../../lib/auth";
+import {
+  getProductFormOptions,
+  getProductVariantRows,
+} from "../../../../lib/product-queries";
 
 export const instant = false;
 
@@ -24,8 +28,27 @@ export default async function DashboardModulePage({
 
   if (!config || !screen) notFound();
   const user = await requireDashboardRole(config.role);
+  const isOwnerProductList = config.role === "pemilik" && slug === "produk";
+  const isOwnerProductForm = config.role === "pemilik" && slug === "produk-form";
+  const tableRows = isOwnerProductList
+    ? await getProductVariantRows()
+    : undefined;
+  const productFormOptions = isOwnerProductForm
+    ? await getProductFormOptions()
+    : undefined;
 
   return (
-    <DashboardScreen accountName={user.nama} config={config} screen={screen} />
+    <DashboardScreen
+      accountName={user.nama}
+      brandSubtitle={
+        isOwnerProductList || isOwnerProductForm
+          ? "Produksi dan Distribusi"
+          : undefined
+      }
+      config={config}
+      productFormOptions={productFormOptions}
+      screen={screen}
+      tableRows={tableRows}
+    />
   );
 }

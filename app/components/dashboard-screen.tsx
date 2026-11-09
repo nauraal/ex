@@ -2,21 +2,30 @@ import Link from "next/link";
 import DashboardShell from "./dashboard-shell";
 import DemoForm from "./demo-form";
 import DemoReportFilters from "./demo-report-filters";
+import ProductCreateForm from "./product-create-form";
 import {
   dashboardHref,
   type DashboardConfig,
   type DashboardNavigationItem,
+  type DemoRow,
   type DemoScreen,
 } from "../../lib/dashboard-config";
+import type { ProductFormOptions } from "../../lib/product-queries";
 
 export default function DashboardScreen({
   config,
   screen,
   accountName,
+  tableRows,
+  brandSubtitle,
+  productFormOptions,
 }: {
   config: DashboardConfig;
   screen: DemoScreen;
   accountName: string;
+  tableRows?: DemoRow[];
+  brandSubtitle?: string;
+  productFormOptions?: ProductFormOptions;
 }) {
   const activeModule = config.modules.find(
     (module) => module.id === screen.menuId,
@@ -42,6 +51,7 @@ export default function DashboardScreen({
     screen.columns?.[screen.columns.length - 1] === "Aksi"
       ? screen.columns.slice(0, -1)
       : screen.columns;
+  const rows = tableRows ?? screen.rows ?? [];
 
   return (
     <DashboardShell
@@ -51,6 +61,7 @@ export default function DashboardScreen({
       stakeholder={config.label}
       accountName={accountName}
       theme={config.theme}
+      brandSubtitle={brandSubtitle}
     >
       <section className="dashboard-home-panel dashboard-screen-panel">
         <div className="dashboard-heading dashboard-screen-heading">
@@ -96,7 +107,17 @@ export default function DashboardScreen({
           </nav>
         ) : null}
 
-        {screen.kind === "form" && screen.fields ? (
+        {config.role === "pemilik" &&
+        screen.slug === "produk-form" &&
+        productFormOptions ? (
+          <div className="demo-card">
+            <ProductCreateForm options={productFormOptions} />
+          </div>
+        ) : null}
+
+        {screen.kind === "form" &&
+        screen.fields &&
+        !(config.role === "pemilik" && screen.slug === "produk-form") ? (
           <div className="demo-card">
             <DemoForm
               fields={screen.fields}
@@ -126,13 +147,13 @@ export default function DashboardScreen({
 
         {(screen.kind === "table" || screen.kind === "report") &&
         screen.columns &&
-        screen.rows ? (
+        (screen.rows || tableRows) ? (
           <div className="demo-card">
             {screen.kind === "report" ? (
               <DemoReportFilters
                 columns={tableColumns ?? []}
                 role={config.role}
-                rows={screen.rows}
+                rows={rows}
               />
             ) : (
               <div className="demo-table-wrap">
@@ -148,7 +169,7 @@ export default function DashboardScreen({
                     </tr>
                   </thead>
                   <tbody>
-                    {screen.rows.map((item, index) => (
+                    {rows.length ? rows.map((item, index) => (
                       <tr key={`${item.values[0]}-${index}`}>
                         {item.values.map((value, cellIndex) => (
                           <td key={`${cellIndex}-${value}`}>{value}</td>
@@ -172,7 +193,13 @@ export default function DashboardScreen({
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td className="demo-table-empty" colSpan={screen.columns.length}>
+                          Belum ada data produk atau varian.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
