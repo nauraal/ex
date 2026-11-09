@@ -1,3 +1,12 @@
+# Zazi Donut
+
+**Website:** https://ex-fh13.vercel.app/
+
+## Development
+
+Configure `.env` with the PostgreSQL `DATABASE_URL` and `.env.local` with a
+private session signing secret of at least 32 bytes (`SESSION_SECRET`).
+
 ## Development
 
 Configure `.env` with the PostgreSQL `DATABASE_URL` and `.env.local` with a
