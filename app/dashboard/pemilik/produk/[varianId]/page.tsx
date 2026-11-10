@@ -44,7 +44,7 @@ async function ProductVariantDetail({
   if (!Number.isSafeInteger(id) || id < 1) notFound();
 
   const user = await requireDashboardRole("pemilik");
-  const variant = await getProductVariantDetail(id);
+  const variant = await getProductVariantDetail(id, user.username);
 
   if (!variant) notFound();
 
@@ -94,8 +94,8 @@ async function ProductVariantDetail({
               <dd>{variant.nama_varian}</dd>
             </div>
             <div className="product-detail-row">
-              <dt>Harga satuan</dt>
-              <dd>{formatRupiah(variant.produk.harga.toFixed(0))}</dd>
+              <dt>Harga varian</dt>
+              <dd>{formatRupiah(variant.harga.toFixed(0))}</dd>
             </div>
           </dl>
 
@@ -131,13 +131,13 @@ async function ProductVariantDetail({
           variant={{
             id_varian: variant.id_varian,
             nama_varian: variant.nama_varian,
+            harga: variant.harga.toFixed(0),
             deskripsi: variant.deskripsi,
             ingredients_donut: variant.ingredients_donut,
             ingredients_topping: variant.ingredients_topping,
             gambar_url: variant.gambar_url,
             produk: {
               nama_produk: variant.produk.nama_produk,
-              harga: variant.produk.harga.toFixed(0),
               satuan: variant.produk.satuan,
             },
           }}

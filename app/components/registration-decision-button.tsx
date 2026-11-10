@@ -14,10 +14,12 @@ export default function RegistrationDecisionButton({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   async function submitDecision() {
     setError("");
+    setSuccess("");
     setIsSaving(true);
     try {
       const response = await fetch(`/api/pemilik/registrasi/${userId}`, {
@@ -39,6 +41,7 @@ export default function RegistrationDecisionButton({
         return;
       }
 
+      setSuccess(status === "aktif" ? "Pendaftaran disetujui." : "Pendaftaran ditolak.");
       router.refresh();
     } catch (requestError) {
       console.error("Registration decision request failed.", requestError);
@@ -63,6 +66,7 @@ export default function RegistrationDecisionButton({
           {error}
         </span>
       ) : null}
+      {success ? <span className="demo-success" role="status">{success}</span> : null}
     </span>
   );
 }

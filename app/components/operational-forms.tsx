@@ -5,22 +5,50 @@ import { useRouter } from "next/navigation";
 
 export type OperationalOptions = {
   variants: { id_varian: number; label: string }[];
-  plans: { id_rencana: number; label: string; id_varian?: number }[];
+  plans: {
+    id_rencana: number;
+    label: string;
+    id_varian?: number;
+    variants?: {
+      id_varian: number;
+      nama_varian: string;
+      jumlah_rencana_varian_pcs: number;
+    }[];
+  }[];
   materials: { id_bahan: number; nama_bahan: string; satuan: string }[];
   locations: { id_lokasi: number; nama_lokasi: string; alamat_lokasi: string }[];
   couriers: { id_user: number; nama: string }[];
-  productions: { id_hasil: number; label: string }[];
+  productions: {
+    id_hasil: number;
+    label: string;
+    variants?: {
+      id_varian: number;
+      nama_varian: string;
+      jumlah_hasil_pcs: number;
+      jumlah_rusak_pcs: number;
+    }[];
+  }[];
   productionDetails: { id_hasil: number; id_varian: number; label: string }[];
   usageMaterials: { id_bahan: number; nama_bahan: string; satuan: string; jumlah_stok: string }[];
-  courierAllocations: { id_alokasi: number; label: string }[];
+  courierAllocations: {
+    id_alokasi: number;
+    id_pengiriman?: number | null;
+    label: string;
+  }[];
   incomingShipments: { id_pengiriman: number; jumlah_dikirim: number; label: string }[];
+  selectedLocationId?: number;
+  selectedPlanId?: number;
+  selectedMaterialId?: number;
+  selectedProductionId?: number;
+  selectedAllocationId?: number;
+  selectedShipmentId?: number;
 };
 
 export function ProductionPlanForm({ variants }: OperationalOptions) {
   const router = useRouter();
   return (
     <PostForm endpoint="/api/pemilik/rencana" onSuccess={() => { router.push("/dashboard/pemilik/rencana"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Produk dan Varian</span>
@@ -41,7 +69,7 @@ export function ProductionPlanForm({ variants }: OperationalOptions) {
             <span>Catatan</span>
             <textarea maxLength={5000} name="catatan" rows={3} />
           </label>
-          <SubmitButton saving={saving} label="Simpan Rencana" />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Rencana" />
         </>
       )}
     </PostForm>
@@ -53,24 +81,38 @@ export function MaterialRequirementForm({
   materials,
 }: OperationalOptions) {
   const router = useRouter();
-  const [selectedPlan, setSelectedPlan] = useState<number | null>(plans[0]?.id_rencana ?? null);
-  const selectedVariant = plans.find((plan) => plan.id_rencana === selectedPlan)?.id_varian;
+  const [selectedPlanVariant, setSelectedPlanVariant] = useState(
+    plans[0]?.id_varian ? `${plans[0].id_rencana}:${plans[0].id_varian}` : "",
+  );
+  const selectedPlan = plans.find(
+    (plan) => `${plan.id_rencana}:${plan.id_varian}` === selectedPlanVariant,
+  );
   return (
     <PostForm endpoint="/api/pemilik/bahan" onSuccess={() => { router.push("/dashboard/pemilik/bahan"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Rencana Produksi</span>
             <select
-              name="id_rencana"
-              onChange={(event) => setSelectedPlan(Number(event.target.value))}
+              name="plan_variant"
+              onChange={(event) => setSelectedPlanVariant(event.target.value)}
               required
-              value={selectedPlan ?? ""}
+              value={selectedPlanVariant}
             >
               <option disabled value="">Pilih rencana</option>
-              {plans.map((item) => <option key={item.id_rencana} value={item.id_rencana}>{item.label}</option>)}
+              {plans.map((item) => (
+                <option key={`${item.id_rencana}:${item.id_varian}`} value={`${item.id_rencana}:${item.id_varian}`}>
+                  {item.label}
+                </option>
+              ))}
             </select>
           </label>
+          {selectedPlan?.id_varian ? (
+            <>
+              <input name="id_rencana" type="hidden" value={selectedPlan.id_rencana} />
+              <input name="id_varian" type="hidden" value={selectedPlan.id_varian} />
+            </>
+          ) : null}
           <label className="demo-field">
             <span>Bahan Baku</span>
             <select name="id_bahan" required defaultValue="">
@@ -78,13 +120,12 @@ export function MaterialRequirementForm({
               {materials.map((item) => <option key={item.id_bahan} value={item.id_bahan}>{item.nama_bahan} ({item.satuan})</option>)}
             </select>
           </label>
-          {selectedVariant ? <input name="id_varian" type="hidden" value={selectedVariant} /> : null}
           <label className="demo-field">
             <span>Jumlah Kebutuhan</span>
             <input min="0.01" name="jumlah_kebutuhan" required step="0.001" type="number" />
           </label>
           {!plans.length || !materials.length ? <p className="demo-note">Buat rencana produksi dan data bahan baku terlebih dahulu.</p> : null}
-          <SubmitButton saving={saving} label="Simpan Kebutuhan" disabled={!plans.length || !materials.length} />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Kebutuhan" disabled={!plans.length || !materials.length} />
         </>
       )}
     </PostForm>
@@ -95,7 +136,7 @@ export function IngredientCreateForm({ variants }: OperationalOptions) {
   const router = useRouter();
   return (
     <PostForm endpoint="/api/pemilik/bahan" onSuccess={() => { router.push("/dashboard/pemilik/bahan-stok"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <input name="kind" type="hidden" value="material" />
           <label className="demo-field">
@@ -114,7 +155,7 @@ export function IngredientCreateForm({ variants }: OperationalOptions) {
             </select>
           </label>
           {!variants.length ? <p className="demo-note">Belum ada varian produk di database.</p> : null}
-          <SubmitButton saving={saving} label="Simpan Bahan Baku" disabled={!variants.length} />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Bahan Baku" disabled={!variants.length} />
         </>
       )}
     </PostForm>
@@ -124,10 +165,13 @@ export function IngredientCreateForm({ variants }: OperationalOptions) {
 export function ProductStockAdjustmentForm({ variants }: OperationalOptions) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving || completed) return;
     const form = new FormData(event.currentTarget);
     const variantId = Number(form.get("id_varian"));
     const delta = Number(form.get("jumlah_perubahan"));
@@ -137,6 +181,7 @@ export function ProductStockAdjustmentForm({ variants }: OperationalOptions) {
     }
     setSaving(true);
     setError("");
+    setSuccess("");
     try {
       const response = await fetch(`/api/pemilik/stok/${variantId}`, {
         method: "PATCH",
@@ -148,8 +193,12 @@ export function ProductStockAdjustmentForm({ variants }: OperationalOptions) {
         setError(readMessage(body, "Stok produk gagal diperbarui."));
         return;
       }
-      router.push("/dashboard/pemilik/stok");
-      router.refresh();
+      setCompleted(true);
+      setSuccess("Stok produk berhasil diperbarui. Membuka daftar stok...");
+      window.setTimeout(() => {
+        router.push("/dashboard/pemilik/stok");
+        router.refresh();
+      }, 700);
     } catch (requestError) {
       console.error("Product stock adjustment form failed.", requestError);
       setError("Stok produk gagal diperbarui.");
@@ -173,9 +222,10 @@ export function ProductStockAdjustmentForm({ variants }: OperationalOptions) {
       </label>
       {!variants.length ? <p className="demo-note">Belum ada varian produk di database.</p> : null}
       {error ? <p className="demo-error" role="alert">{error}</p> : null}
-      <button className="demo-button demo-button-primary" disabled={saving || !variants.length} type="submit">
-        {saving ? "Menyimpan..." : "Simpan Perubahan Stok"}
+      <button className="demo-button demo-button-primary" disabled={saving || completed || !variants.length} type="submit">
+        {completed ? "Tersimpan" : saving ? "Menyimpan..." : "Simpan Perubahan Stok"}
       </button>
+      {success ? <p className="demo-success" role="status">{success}</p> : null}
     </form>
   );
 }
@@ -184,16 +234,22 @@ export function AllocationForm({
   plans: initialPlans,
   locations: initialLocations,
   couriers,
+  selectedLocationId: initialSelectedLocationId,
 }: OperationalOptions) {
   const [locations, setLocations] = useState(initialLocations);
+  const [selectedLocationId, setSelectedLocationId] = useState(
+    initialSelectedLocationId ? String(initialSelectedLocationId) : "",
+  );
   const [locationName, setLocationName] = useState("");
   const [locationAddress, setLocationAddress] = useState("");
   const [locationError, setLocationError] = useState("");
+  const [locationSuccess, setLocationSuccess] = useState("");
   const [savingLocation, setSavingLocation] = useState(false);
   const router = useRouter();
 
   async function addLocation() {
     setLocationError("");
+    setLocationSuccess("");
     setSavingLocation(true);
     try {
       const response = await fetch("/api/pemilik/lokasi", {
@@ -210,8 +266,10 @@ export function AllocationForm({
         const id = result.id_lokasi;
         if (typeof id === "number") {
           setLocations((items) => [...items, { id_lokasi: id, nama_lokasi: locationName, alamat_lokasi: locationAddress }]);
+          setSelectedLocationId(String(id));
           setLocationName("");
           setLocationAddress("");
+          setLocationSuccess("Lokasi berhasil disimpan.");
         }
       }
     } catch (error) {
@@ -224,18 +282,27 @@ export function AllocationForm({
 
   return (
     <PostForm endpoint="/api/pemilik/alokasi" onSuccess={() => { router.push("/dashboard/pemilik/alokasi"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Rencana dengan Hasil dan Stok Tersedia</span>
-            <select name="id_rencana" required defaultValue="">
+            <select name="id_rencana_varian" required defaultValue="">
               <option disabled value="">Pilih rencana</option>
-              {initialPlans.map((plan) => <option key={plan.id_rencana} value={plan.id_rencana}>{plan.label}</option>)}
+              {initialPlans.map((plan) => (
+                <option key={`${plan.id_rencana}:${plan.id_varian}`} value={`${plan.id_rencana}:${plan.id_varian}`}>
+                  {plan.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="demo-field">
             <span>Lokasi Penjualan</span>
-            <select name="id_lokasi" required defaultValue="">
+            <select
+              name="id_lokasi"
+              onChange={(event) => setSelectedLocationId(event.target.value)}
+              required
+              value={selectedLocationId}
+            >
               <option disabled value="">Pilih lokasi</option>
               {locations.map((location) => <option key={location.id_lokasi} value={location.id_lokasi}>{location.nama_lokasi} — {location.alamat_lokasi}</option>)}
             </select>
@@ -255,7 +322,7 @@ export function AllocationForm({
             <span>Tanggal Alokasi</span>
             <input name="tanggal_alokasi" required type="date" />
           </label>
-          <SubmitButton saving={saving} label="Simpan Alokasi" disabled={!initialPlans.length || !locations.length || !couriers.length} />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Alokasi" disabled={!initialPlans.length || !locations.length || !couriers.length} />
           {!initialPlans.length ? <p className="demo-note">Belum ada hasil produksi dengan stok yang dapat dialokasikan.</p> : null}
           {!couriers.length ? <p className="demo-note">Belum ada akun pengantar aktif.</p> : null}
           {!locations.length ? <p className="demo-note">Tambahkan lokasi sebelum menyimpan alokasi.</p> : null}
@@ -272,6 +339,7 @@ export function AllocationForm({
               {savingLocation ? "Menyimpan..." : "Tambah Lokasi"}
             </button>
             {locationError ? <p className="demo-error" role="alert">{locationError}</p> : null}
+            {locationSuccess ? <p className="demo-success" role="status">{locationSuccess}</p> : null}
           </div>
         </>
       )}
@@ -279,62 +347,100 @@ export function AllocationForm({
   );
 }
 
-export function ProductionResultForm({ plans }: OperationalOptions) {
+export function ProductionResultForm({
+  plans,
+  selectedPlanId: initialSelectedPlanId,
+}: OperationalOptions) {
   const router = useRouter();
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(
+    initialSelectedPlanId ?? null,
+  );
+  const selectedPlan = plans.find((plan) => plan.id_rencana === selectedPlanId);
   return (
     <PostForm endpoint="/api/pemilik/produksi" onSuccess={() => { router.push("/dashboard/pembuat_donut/hasil-produksi"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Rencana Produksi</span>
-            <select name="id_rencana" required defaultValue="">
+            <select
+              name="id_rencana"
+              onChange={(event) => setSelectedPlanId(Number(event.target.value))}
+              required
+              value={selectedPlanId ?? ""}
+            >
               <option disabled value="">Pilih rencana</option>
               {plans.map((plan) => <option key={plan.id_rencana} value={plan.id_rencana}>{plan.label}</option>)}
             </select>
           </label>
-          <label className="demo-field">
-            <span>Jumlah Hasil</span>
-            <input min="1" name="jumlah_hasil" required type="number" />
-          </label>
-          <label className="demo-field">
-            <span>Jumlah Rusak</span>
-            <input defaultValue="0" min="0" name="jumlah_rusak" required type="number" />
-          </label>
+          {selectedPlan?.variants?.map((variant) => (
+            <div className="demo-form-grid" key={variant.id_varian}>
+              <p>{variant.nama_varian} — Rencana {variant.jumlah_rencana_varian_pcs} pcs</p>
+              <label className="demo-field">
+                <span>Jumlah Hasil ({variant.nama_varian})</span>
+                <input min="0" name={`jumlah_hasil_${variant.id_varian}`} required type="number" />
+              </label>
+              <label className="demo-field">
+                <span>Jumlah Rusak ({variant.nama_varian})</span>
+                <input defaultValue="0" min="0" name={`jumlah_rusak_${variant.id_varian}`} required type="number" />
+              </label>
+            </div>
+          ))}
           <label className="demo-field">
             <span>Catatan Kualitas</span>
             <textarea maxLength={255} name="keterangan_kualitas" rows={3} />
           </label>
           {!plans.length ? <p className="demo-note">Tidak ada rencana yang menunggu hasil produksi.</p> : null}
-          <SubmitButton saving={saving} label="Simpan Hasil Produksi" disabled={!plans.length} />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Hasil Produksi" disabled={!plans.length} />
         </>
       )}
     </PostForm>
   );
 }
 
-export function ProductionDamageForm({ productions }: OperationalOptions) {
+export function ProductionDamageForm({
+  productions,
+  selectedProductionId: initialSelectedProductionId,
+}: OperationalOptions) {
   const router = useRouter();
+  const [selectedProductionId, setSelectedProductionId] = useState<number | null>(
+    initialSelectedProductionId ?? null,
+  );
+  const selectedProduction = productions.find((production) => production.id_hasil === selectedProductionId);
   return (
     <PostForm endpoint="/api/pemilik/produksi" method="PATCH" onSuccess={() => { router.push("/dashboard/pembuat_donut/kualitas-hasil"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Hasil Produksi</span>
-            <select name="id_hasil" required defaultValue="">
+            <select
+              name="id_hasil"
+              onChange={(event) => setSelectedProductionId(Number(event.target.value))}
+              required
+              value={selectedProductionId ?? ""}
+            >
               <option disabled value="">Pilih hasil produksi</option>
               {productions.map((item) => <option key={item.id_hasil} value={item.id_hasil}>{item.label}</option>)}
             </select>
           </label>
-          <label className="demo-field">
-            <span>Jumlah Produk Rusak (total)</span>
-            <input min="0" name="jumlah_rusak" required type="number" />
-          </label>
+          {selectedProduction?.variants?.map((variant) => (
+            <label className="demo-field" key={variant.id_varian}>
+              <span>Jumlah Produk Rusak ({variant.nama_varian}, hasil {variant.jumlah_hasil_pcs} pcs)</span>
+              <input
+                defaultValue={variant.jumlah_rusak_pcs}
+                max={variant.jumlah_hasil_pcs}
+                min="0"
+                name={`jumlah_rusak_${variant.id_varian}`}
+                required
+                type="number"
+              />
+            </label>
+          ))}
           <label className="demo-field">
             <span>Alasan / Catatan Kualitas</span>
             <textarea maxLength={255} name="keterangan_kualitas" rows={3} />
           </label>
           {!productions.length ? <p className="demo-note">Belum ada hasil produksi yang dapat diperbarui.</p> : null}
-          <SubmitButton saving={saving} label="Simpan Catatan Kerusakan" disabled={!productions.length} />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Catatan Kerusakan" disabled={!productions.length} />
         </>
       )}
     </PostForm>
@@ -344,11 +450,18 @@ export function ProductionDamageForm({ productions }: OperationalOptions) {
 export function MaterialUsageForm({
   productionDetails,
   usageMaterials,
+  selectedMaterialId: initialSelectedMaterialId,
 }: OperationalOptions) {
   const router = useRouter();
+  const [selectedMaterialId, setSelectedMaterialId] = useState(
+    initialSelectedMaterialId ? String(initialSelectedMaterialId) : "",
+  );
+  const selectedMaterial = usageMaterials.find(
+    (material) => String(material.id_bahan) === selectedMaterialId,
+  );
   return (
     <PostForm endpoint="/api/pemilik/bahan/pemakaian" onSuccess={() => { router.push("/dashboard/pembuat_donut/bahan-baku"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Hasil Produksi dan Varian</span>
@@ -363,7 +476,12 @@ export function MaterialUsageForm({
           </label>
           <label className="demo-field">
             <span>Bahan Baku</span>
-            <select name="id_bahan" required defaultValue="">
+            <select
+              name="id_bahan"
+              onChange={(event) => setSelectedMaterialId(event.target.value)}
+              required
+              value={selectedMaterialId}
+            >
               <option disabled value="">Pilih bahan</option>
               {usageMaterials.map((material) => (
                 <option key={material.id_bahan} value={material.id_bahan}>
@@ -372,6 +490,11 @@ export function MaterialUsageForm({
               ))}
             </select>
           </label>
+          {selectedMaterial ? (
+            <p className="demo-note">
+              Stok {selectedMaterial.nama_bahan}: {selectedMaterial.jumlah_stok} {selectedMaterial.satuan}
+            </p>
+          ) : null}
           <label className="demo-field">
             <span>Jumlah Pemakaian</span>
             <input min="0.01" name="jumlah_pemakaian" required step="0.01" type="number" />
@@ -381,6 +504,7 @@ export function MaterialUsageForm({
           ) : null}
           <SubmitButton
             saving={saving}
+            completed={completed}
             label="Simpan Pemakaian Bahan"
             disabled={!productionDetails.length || !usageMaterials.length}
           />
@@ -390,19 +514,38 @@ export function MaterialUsageForm({
   );
 }
 
-export function CourierShipmentForm({ courierAllocations }: OperationalOptions) {
+export function CourierShipmentForm({
+  courierAllocations,
+  selectedAllocationId: initialSelectedAllocationId,
+}: OperationalOptions) {
   const router = useRouter();
+  const [selectedAllocationId, setSelectedAllocationId] = useState(
+    initialSelectedAllocationId ? String(initialSelectedAllocationId) : "",
+  );
+  const selectedAllocation = courierAllocations.find(
+    (allocation) => String(allocation.id_alokasi) === selectedAllocationId,
+  );
   return (
     <PostForm endpoint="/api/pengantar/pengiriman" onSuccess={() => { router.push("/dashboard/pengantar/pengiriman"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Alokasi Produk</span>
-            <select name="id_alokasi" required defaultValue="">
+            <select
+              name="id_alokasi"
+              onChange={(event) => setSelectedAllocationId(event.target.value)}
+              required
+              value={selectedAllocationId}
+            >
               <option disabled value="">Pilih alokasi</option>
               {courierAllocations.map((item) => <option key={item.id_alokasi} value={item.id_alokasi}>{item.label}</option>)}
             </select>
           </label>
+          <input
+            name="id_pengiriman"
+            type="hidden"
+            value={selectedAllocation?.id_pengiriman ?? ""}
+          />
           <label className="demo-field">
             <span>Tanggal Pengiriman</span>
             <input name="tanggal_kirim" required type="date" />
@@ -415,22 +558,33 @@ export function CourierShipmentForm({ courierAllocations }: OperationalOptions) 
             </select>
           </label>
           {!courierAllocations.length ? <p className="demo-note">Belum ada alokasi yang ditugaskan kepada akun ini.</p> : null}
-          <SubmitButton saving={saving} label="Simpan Status Pengiriman" disabled={!courierAllocations.length} />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Status Pengiriman" disabled={!courierAllocations.length} />
         </>
       )}
     </PostForm>
   );
 }
 
-export function GuardReceiptForm({ incomingShipments }: OperationalOptions) {
+export function GuardReceiptForm({
+  incomingShipments,
+  selectedShipmentId: initialSelectedShipmentId,
+}: OperationalOptions) {
   const router = useRouter();
+  const [selectedShipmentId, setSelectedShipmentId] = useState(
+    initialSelectedShipmentId ? String(initialSelectedShipmentId) : "",
+  );
   return (
     <PostForm endpoint="/api/penjaga/penerimaan" onSuccess={() => { router.push("/dashboard/penjaga_tempat/riwayat-penerimaan"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Pengiriman Masuk</span>
-            <select name="id_pengiriman" required defaultValue="">
+            <select
+              name="id_pengiriman"
+              onChange={(event) => setSelectedShipmentId(event.target.value)}
+              required
+              value={selectedShipmentId}
+            >
               <option disabled value="">Pilih pengiriman</option>
               {incomingShipments.map((item) => (
                 <option key={item.id_pengiriman} value={item.id_pengiriman}>
@@ -452,7 +606,7 @@ export function GuardReceiptForm({ incomingShipments }: OperationalOptions) {
             <input name="tanggal_terima" required type="date" />
           </label>
           {!incomingShipments.length ? <p className="demo-note">Belum ada pengiriman yang menunggu penerimaan.</p> : null}
-          <SubmitButton saving={saving} label="Konfirmasi Penerimaan" disabled={!incomingShipments.length} />
+          <SubmitButton saving={saving} completed={completed} label="Konfirmasi Penerimaan" disabled={!incomingShipments.length} />
         </>
       )}
     </PostForm>
@@ -463,7 +617,7 @@ export function ProductionReportForm({ productions }: OperationalOptions) {
   const router = useRouter();
   return (
     <PostForm endpoint="/api/pemilik/laporan" onSuccess={() => { router.push("/dashboard/pemilik/laporan"); router.refresh(); }}>
-      {(saving) => (
+      {(saving, completed) => (
         <>
           <label className="demo-field">
             <span>Hasil Produksi</span>
@@ -489,7 +643,7 @@ export function ProductionReportForm({ productions }: OperationalOptions) {
             <input name="tanggal_laporan" required type="date" />
           </label>
           {!productions.length ? <p className="demo-note">Laporan dapat dibuat setelah hasil produksi tersimpan.</p> : null}
-          <SubmitButton saving={saving} label="Simpan Laporan" disabled={!productions.length} />
+          <SubmitButton saving={saving} completed={completed} label="Simpan Laporan" disabled={!productions.length} />
         </>
       )}
     </PostForm>
@@ -509,9 +663,11 @@ export function PlanRowActions({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSuccess("");
     const form = Object.fromEntries(new FormData(event.currentTarget).entries());
     setSaving(true);
     setError("");
@@ -523,7 +679,10 @@ export function PlanRowActions({
       });
       const body: unknown = await response.json();
       if (!response.ok) setError(readMessage(body, "Rencana gagal diperbarui."));
-      else router.refresh();
+      else {
+        setSuccess("Rencana berhasil diperbarui.");
+        router.refresh();
+      }
     } catch (requestError) {
       console.error("Production plan update request failed.", requestError);
       setError("Rencana gagal diperbarui.");
@@ -535,11 +694,15 @@ export function PlanRowActions({
     if (!window.confirm("Hapus rencana produksi ini? Rencana yang telah dipakai tidak dapat dihapus.")) return;
     setSaving(true);
     setError("");
+    setSuccess("");
     try {
       const response = await fetch(`/api/pemilik/rencana/${id}`, { method: "DELETE" });
       const body: unknown = await response.json();
       if (!response.ok) setError(readMessage(body, "Rencana gagal dihapus."));
-      else router.refresh();
+      else {
+        setSuccess("Rencana berhasil dihapus.");
+        router.refresh();
+      }
     } catch (requestError) {
       console.error("Production plan deletion request failed.", requestError);
       setError("Rencana gagal dihapus.");
@@ -557,6 +720,7 @@ export function PlanRowActions({
       </form>
       <button className="demo-row-link action-button" disabled={saving} onClick={remove} type="button">Hapus</button>
       {error ? <span className="demo-error" role="alert">{error}</span> : null}
+      {success ? <span className="demo-success" role="status">{success}</span> : null}
     </span>
   );
 }
@@ -571,6 +735,7 @@ export function ProductStockAdjustment({
   const router = useRouter();
   const [delta, setDelta] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   async function adjust() {
     const value = Number(delta);
@@ -580,6 +745,7 @@ export function ProductStockAdjustment({
     }
     setSaving(true);
     setError("");
+    setSuccess("");
     try {
       const response = await fetch(`/api/pemilik/stok/${variantId}`, {
         method: "PATCH",
@@ -588,7 +754,11 @@ export function ProductStockAdjustment({
       });
       const body: unknown = await response.json();
       if (!response.ok) setError(readMessage(body, "Stok gagal diperbarui."));
-      else { setDelta(""); router.refresh(); }
+      else {
+        setDelta("");
+        setSuccess("Stok produk berhasil diperbarui.");
+        router.refresh();
+      }
     } catch (requestError) {
       console.error("Product stock request failed.", requestError);
       setError("Stok gagal diperbarui.");
@@ -602,6 +772,7 @@ export function ProductStockAdjustment({
       <input aria-label="Perubahan stok produk" onChange={(event) => setDelta(event.target.value)} placeholder="+/- jumlah" value={delta} />
       <button className="demo-row-link action-button" disabled={saving} onClick={adjust} type="button">{saving ? "..." : "Simpan"}</button>
       {error ? <span className="demo-error" role="alert">{error}</span> : null}
+      {success ? <span className="demo-success" role="status">{success}</span> : null}
     </span>
   );
 }
@@ -616,10 +787,12 @@ export function RawMaterialStockAdjustment({
   const router = useRouter();
   const [value, setValue] = useState(quantity);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   async function save() {
     setSaving(true);
     setError("");
+    setSuccess("");
     try {
       const response = await fetch(`/api/pemilik/bahan/${materialId}/stock`, {
         method: "PUT",
@@ -628,7 +801,10 @@ export function RawMaterialStockAdjustment({
       });
       const body: unknown = await response.json();
       if (!response.ok) setError(readMessage(body, "Stok bahan gagal diperbarui."));
-      else router.refresh();
+      else {
+        setSuccess("Stok bahan berhasil diperbarui.");
+        router.refresh();
+      }
     } catch (requestError) {
       console.error("Material stock request failed.", requestError);
       setError("Stok bahan gagal diperbarui.");
@@ -641,6 +817,7 @@ export function RawMaterialStockAdjustment({
       <input aria-label="Jumlah stok bahan" min="0" onChange={(event) => setValue(event.target.value)} step="0.001" type="number" value={value} />
       <button className="demo-row-link action-button" disabled={saving} onClick={save} type="button">{saving ? "..." : "Simpan Stok"}</button>
       {error ? <span className="demo-error" role="alert">{error}</span> : null}
+      {success ? <span className="demo-success" role="status">{success}</span> : null}
     </span>
   );
 }
@@ -654,14 +831,18 @@ function PostForm({
   endpoint: string;
   method?: "POST" | "PATCH";
   onSuccess: () => void;
-  children: (saving: boolean) => ReactNode;
+  children: (saving: boolean, completed: boolean) => ReactNode;
 }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [completed, setCompleted] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving || completed) return;
     setSaving(true);
     setError("");
+    setSuccess("");
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
     try {
       const response = await fetch(endpoint, {
@@ -674,7 +855,9 @@ function PostForm({
         setError(readMessage(body, "Data gagal disimpan."));
         return;
       }
-      onSuccess();
+      setSuccess("Data berhasil disimpan. Mengarahkan...");
+      setCompleted(true);
+      window.setTimeout(onSuccess, 700);
     } catch (requestError) {
       console.error("Database form request failed.", requestError);
       setError("Data gagal disimpan. Periksa koneksi lalu coba lagi.");
@@ -684,25 +867,28 @@ function PostForm({
   }
   return (
     <form className="demo-form" onSubmit={submit}>
-      <div className="demo-form-grid">{children(saving)}</div>
+      <div className="demo-form-grid">{children(saving, completed)}</div>
       {error ? <p className="demo-error" role="alert">{error}</p> : null}
+      {success ? <p className="demo-success" role="status">{success}</p> : null}
     </form>
   );
 }
 
 function SubmitButton({
   saving,
+  completed = false,
   label,
   disabled = false,
 }: {
   saving: boolean;
+  completed?: boolean;
   label: string;
   disabled?: boolean;
 }) {
   return (
     <div className="demo-form-footer">
-      <button className="demo-button demo-button-primary" disabled={saving || disabled} type="submit">
-        {saving ? "Menyimpan..." : label}
+      <button className="demo-button demo-button-primary" disabled={saving || completed || disabled} type="submit">
+        {completed ? "Tersimpan" : saving ? "Menyimpan..." : label}
       </button>
     </div>
   );

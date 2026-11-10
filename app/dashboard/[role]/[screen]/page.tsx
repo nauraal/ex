@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import DashboardScreen from "../../../components/dashboard-screen";
+import type { OperationalOptions } from "../../../components/operational-forms";
 import {
   dashboardScreenStaticParams,
   getDashboardConfig,
@@ -25,6 +26,7 @@ import {
   getIngredientOptions,
   getMaterialUsageOptions,
   getLocationOptions,
+  getLocationRows,
   getMakerPlanRows,
   getMaterialRequirementRows,
   getOpenProductionPlanOptions,
@@ -46,10 +48,13 @@ export function generateStaticParams() {
 
 export default async function DashboardModulePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ role: string; screen: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { role, screen: slug } = await params;
+  const query = searchParams ? await searchParams : {};
   const config = getDashboardConfig(role);
   const screen = getDashboardScreen(role, slug);
 
@@ -63,7 +68,7 @@ export default async function DashboardModulePage({
     if (config.role === "pemilik") {
       switch (slug) {
         case "produk":
-          tableRows = await getProductVariantRows();
+          tableRows = await getProductVariantRows(user.username);
           break;
         case "verifikasi":
           tableRows = await getRegistrationRows();
@@ -75,23 +80,28 @@ export default async function DashboardModulePage({
           tableRows = await getRegistrationHistoryRows();
           break;
         case "rencana":
-          tableRows = await getProductionPlanRows();
+          tableRows = await getProductionPlanRows(user.username);
           break;
         case "bahan":
-          tableRows = await getMaterialRequirementRows();
+          tableRows = await getMaterialRequirementRows(user.username);
           break;
         case "bahan-stok":
-          tableRows = await getRawMaterialStockRows();
+          tableRows = await getRawMaterialStockRows(true, user.username);
           break;
         case "stok":
-          tableRows = await getProductStockRows();
+          tableRows = await getProductStockRows(user.username);
           break;
         case "alokasi":
+          tableRows = await getAllocationRows(user.username);
+          break;
         case "alokasi-riwayat":
-          tableRows = await getAllocationRows();
+          tableRows = await getAllocationRows(user.username, true);
+          break;
+        case "alokasi-lokasi":
+          tableRows = await getLocationRows();
           break;
         case "laporan":
-          tableRows = await getProductionReportRows();
+          tableRows = await getProductionReportRows(user.username);
           break;
       }
     } else if (config.role === "pembuat_donut") {
@@ -111,22 +121,22 @@ export default async function DashboardModulePage({
   const productFormOptions = isOwnerProductForm
     ? await getProductFormOptions()
     : undefined;
-  const operationalOptions = {
+  const operationalOptions: OperationalOptions = {
     variants:
       (config.role === "pemilik" && ["rencana-form", "bahan-material-form", "stok-form"].includes(slug))
-        ? await getProductionPlanOptions()
+        ? await getProductionPlanOptions(user.username)
         : [],
     plans:
       config.role === "pemilik" && slug === "bahan-form"
-        ? await getRequirementPlanOptions()
+        ? await getRequirementPlanOptions(user.username)
         : config.role === "pemilik" && slug === "alokasi-form"
-          ? await getAllocatablePlanOptions()
+          ? await getAllocatablePlanOptions(user.username)
           : config.role === "pembuat_donut" && slug === "catat-hasil"
             ? await getOpenProductionPlanOptions(user.username)
             : [],
     materials:
       config.role === "pemilik" && slug === "bahan-form"
-        ? await getIngredientOptions()
+        ? await getIngredientOptions(user.username)
         : [],
     locations:
       config.role === "pemilik" && slug === "alokasi-form"
@@ -138,7 +148,7 @@ export default async function DashboardModulePage({
         : [],
     productions:
       config.role === "pemilik" && slug === "laporan-form"
-        ? await getProductionOptions()
+        ? await getProductionOptions(user.username, "pemilik")
         : [],
     ...(
       config.role === "pembuat_donut" && slug === "catat-penggunaan"
@@ -154,9 +164,56 @@ export default async function DashboardModulePage({
         ? await getIncomingShipmentOptions(user.username)
         : [],
     ...(config.role === "pembuat_donut" && slug === "catat-rusak"
-      ? { productions: await getProductionOptions(user.username) }
+      ? { productions: await getProductionOptions(user.username, "pembuat_donut") }
       : {}),
   };
+  if (config.role === "pemilik" && slug === "alokasi-form") {
+    const locationId = parsePositiveId(query.id_lokasi);
+    if (locationId && operationalOptions.locations.some((location) => location.id_lokasi === locationId)) {
+      operationalOptions.selectedLocationId = locationId;
+    }
+  }
+  if (config.role === "pembuat_donut" && slug === "catat-hasil") {
+    const planId = parsePositiveId(query.id_rencana);
+    if (planId && operationalOptions.plans.some((plan) => plan.id_rencana === planId)) {
+      operationalOptions.selectedPlanId = planId;
+    }
+  }
+  if (config.role === "pembuat_donut" && slug === "catat-penggunaan") {
+    const materialId = parsePositiveId(query.id_bahan);
+    if (materialId && operationalOptions.usageMaterials.some((material) => material.id_bahan === materialId)) {
+      operationalOptions.selectedMaterialId = materialId;
+    }
+  }
+  if (config.role === "pembuat_donut" && slug === "catat-rusak") {
+    const productionId = parsePositiveId(query.id_hasil);
+    if (productionId && operationalOptions.productions.some((production) => production.id_hasil === productionId)) {
+      operationalOptions.selectedProductionId = productionId;
+    }
+  }
+  if (config.role === "pengantar" && slug === "konfirmasi-pengiriman") {
+    const allocationId = parsePositiveId(query.id_alokasi);
+    const shipmentId = parsePositiveId(query.id_pengiriman);
+    const hasShipmentId =
+      typeof query.id_pengiriman === "string" && query.id_pengiriman.length > 0;
+    const allocation = operationalOptions.courierAllocations.find(
+      (item) =>
+        item.id_alokasi === allocationId &&
+        (!hasShipmentId || item.id_pengiriman === shipmentId),
+    );
+    if (allocation) {
+      operationalOptions.selectedAllocationId = allocation.id_alokasi;
+      if (allocation.id_pengiriman) {
+        operationalOptions.selectedShipmentId = allocation.id_pengiriman;
+      }
+    }
+  }
+  if (config.role === "penjaga_tempat" && slug === "konfirmasi-penerimaan") {
+    const shipmentId = parsePositiveId(query.id_pengiriman);
+    if (shipmentId && operationalOptions.incomingShipments.some((shipment) => shipment.id_pengiriman === shipmentId)) {
+      operationalOptions.selectedShipmentId = shipmentId;
+    }
+  }
   const displayScreen =
     screen.kind === "detail"
       ? {
@@ -182,4 +239,10 @@ export default async function DashboardModulePage({
       tableRows={tableRows}
     />
   );
+}
+
+function parsePositiveId(value: string | string[] | undefined) {
+  if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) ? id : null;
 }

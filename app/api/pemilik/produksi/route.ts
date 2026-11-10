@@ -73,17 +73,8 @@ export async function POST(request: Request) {
   }
   const values = body as Record<string, unknown>;
   const planId = parsePositiveInteger(values.id_rencana);
-  const produced = parseNonNegativeInteger(values.jumlah_hasil);
-  const damaged = parseNonNegativeInteger(values.jumlah_rusak);
   const quality = readOptionalString(values.keterangan_kualitas, 255);
-  if (
-    planId === null ||
-    produced === null ||
-    produced < 1 ||
-    damaged === null ||
-    damaged > produced ||
-    quality === undefined
-  ) {
+  if (planId === null || quality === undefined) {
     return NextResponse.json({ message: "Rencana, jumlah hasil, jumlah rusak, atau catatan tidak valid." }, { status: 400 });
   }
 
@@ -96,14 +87,55 @@ export async function POST(request: Request) {
           tanggal_produksi: true,
           jumlah_rencana: true,
           id_produk: true,
-          id_varian: true,
           id_pemilik: true,
           id_pembuat_donut: true,
           produksi: { select: { id_hasil: true } },
+          detail_produk: {
+            select: {
+              id_varian: true,
+              jumlah_rencana_varian_pcs: true,
+            },
+          },
         },
       });
       if (!plan) return { kind: "not_found" as const };
       if (plan.produksi) return { kind: "already_recorded" as const };
+      if (!plan.detail_produk.length) return { kind: "details_missing" as const };
+
+      const details: {
+        id_varian: number;
+        jumlah_rencana_varian_pcs: number;
+        jumlah_hasil_pcs: number;
+        jumlah_rusak_pcs: number;
+      }[] = [];
+      for (const plannedDetail of plan.detail_produk) {
+        const producedValue =
+          values[`jumlah_hasil_${plannedDetail.id_varian}`] ??
+          (plan.detail_produk.length === 1 ? values.jumlah_hasil : undefined);
+        const damagedValue =
+          values[`jumlah_rusak_${plannedDetail.id_varian}`] ??
+          (plan.detail_produk.length === 1 ? values.jumlah_rusak : undefined);
+        const produced = parseNonNegativeInteger(producedValue);
+        const damaged = parseNonNegativeInteger(damagedValue);
+        if (produced === null || damaged === null || damaged > produced) {
+          return { kind: "invalid_details" as const };
+        }
+        details.push({
+          id_varian: plannedDetail.id_varian,
+          jumlah_rencana_varian_pcs: plannedDetail.jumlah_rencana_varian_pcs,
+          jumlah_hasil_pcs: produced,
+          jumlah_rusak_pcs: damaged,
+        });
+      }
+      const totalProduced = details.reduce(
+        (sum, detail) => sum + detail.jumlah_hasil_pcs,
+        0,
+      );
+      const totalDamaged = details.reduce(
+        (sum, detail) => sum + detail.jumlah_rusak_pcs,
+        0,
+      );
+      if (totalProduced < 1) return { kind: "invalid_details" as const };
 
       const assigned =
         actor.role === "pemilik"
@@ -123,8 +155,8 @@ export async function POST(request: Request) {
         data: {
           tanggal_produksi: plan.tanggal_produksi,
           jumlah_rencana: plan.jumlah_rencana,
-          jumlah_hasil: produced,
-          jumlah_rusak: damaged,
+          jumlah_hasil: totalProduced,
+          jumlah_rusak: totalDamaged,
           keterangan_kualitas: quality,
           id_rencana: plan.id_rencana,
           id_pemilik: plan.id_pemilik,
@@ -133,27 +165,30 @@ export async function POST(request: Request) {
         },
         select: { id_hasil: true },
       });
-      await transaction.detail_produksi.create({
-        data: {
+      await transaction.detail_produksi.createMany({
+        data: details.map((detail) => ({
           id_hasil: result.id_hasil,
-          id_varian: plan.id_varian,
-          jumlah_rencana_varian_pcs: plan.jumlah_rencana,
-          jumlah_hasil_pcs: produced,
-          jumlah_rusak_pcs: damaged,
-        },
+          id_varian: detail.id_varian,
+          jumlah_rencana_varian_pcs: detail.jumlah_rencana_varian_pcs,
+          jumlah_hasil_pcs: detail.jumlah_hasil_pcs,
+          jumlah_rusak_pcs: detail.jumlah_rusak_pcs,
+        })),
       });
       await transaction.rencana_produksi.update({
         where: { id_rencana: plan.id_rencana },
         data: { status_rencana: "selesai" },
       });
-      await transaction.stok_produk.upsert({
-        where: { id_varian: plan.id_varian },
-        create: {
-          id_varian: plan.id_varian,
-          jumlah_stok: produced - damaged,
-        },
-        update: { jumlah_stok: { increment: produced - damaged } },
-      });
+      for (const detail of details) {
+        const available = detail.jumlah_hasil_pcs - detail.jumlah_rusak_pcs;
+        await transaction.stok_produk.upsert({
+          where: { id_varian: detail.id_varian },
+          create: {
+            id_varian: detail.id_varian,
+            jumlah_stok: available,
+          },
+          update: { jumlah_stok: { increment: available } },
+        });
+      }
       return { kind: "created" as const, id: result.id_hasil };
     });
 
@@ -162,6 +197,12 @@ export async function POST(request: Request) {
     }
     if (record.kind === "already_recorded") {
       return NextResponse.json({ message: "Hasil untuk rencana ini sudah dicatat." }, { status: 409 });
+    }
+    if (record.kind === "details_missing") {
+      return NextResponse.json({ message: "Detail varian pada rencana tidak ditemukan." }, { status: 409 });
+    }
+    if (record.kind === "invalid_details") {
+      return NextResponse.json({ message: "Jumlah hasil dan rusak untuk setiap varian tidak valid." }, { status: 400 });
     }
     if (record.kind === "forbidden") {
       return NextResponse.json({ message: "Rencana ini bukan tanggung jawab akun Anda." }, { status: 403 });
@@ -194,9 +235,8 @@ export async function PATCH(request: Request) {
   }
   const values = body as Record<string, unknown>;
   const productionId = parsePositiveInteger(values.id_hasil);
-  const damaged = parseNonNegativeInteger(values.jumlah_rusak);
   const quality = readOptionalString(values.keterangan_kualitas, 255);
-  if (productionId === null || damaged === null || quality === undefined) {
+  if (productionId === null || quality === undefined) {
     return NextResponse.json({ message: "Hasil produksi, jumlah rusak, atau catatan tidak valid." }, { status: 400 });
   }
 
@@ -209,11 +249,39 @@ export async function PATCH(request: Request) {
           id_pembuat_donut: true,
           jumlah_hasil: true,
           jumlah_rusak: true,
-          detail_produksi: { select: { id_varian: true } },
+          detail_produksi: {
+            select: {
+              id_varian: true,
+              jumlah_hasil_pcs: true,
+              jumlah_rusak_pcs: true,
+            },
+          },
         },
       });
       if (!production) return { kind: "not_found" as const };
-      if (damaged > production.jumlah_hasil) return { kind: "invalid_quantity" as const };
+      if (!production.detail_produksi.length) return { kind: "detail_missing" as const };
+
+      const details: { id_varian: number; jumlah_rusak_pcs: number }[] = [];
+      for (const productionDetail of production.detail_produksi) {
+        const damageValue =
+          values[`jumlah_rusak_${productionDetail.id_varian}`] ??
+          (production.detail_produksi.length === 1 ? values.jumlah_rusak : undefined);
+        const damaged = parseNonNegativeInteger(damageValue);
+        if (damaged === null || damaged > productionDetail.jumlah_hasil_pcs) {
+          return { kind: "invalid_quantity" as const };
+        }
+        details.push({
+          id_varian: productionDetail.id_varian,
+          jumlah_rusak_pcs: damaged,
+        });
+      }
+      const totalDamaged = details.reduce(
+        (sum, detail) => sum + detail.jumlah_rusak_pcs,
+        0,
+      );
+      if (totalDamaged > production.jumlah_hasil) {
+        return { kind: "invalid_quantity" as const };
+      }
 
       const assigned =
         actor.role === "pemilik"
@@ -227,38 +295,42 @@ export async function PATCH(request: Request) {
             }))?.id_pembuat_donut === production.id_pembuat_donut;
       if (!assigned) return { kind: "forbidden" as const };
 
-      const detail = production.detail_produksi[0];
-      if (!detail) return { kind: "detail_missing" as const };
-      const damageDelta = damaged - production.jumlah_rusak;
-      if (damageDelta > 0) {
-        const stock = await transaction.stok_produk.updateMany({
+      for (const detail of details) {
+        const previous = production.detail_produksi.find(
+          (item) => item.id_varian === detail.id_varian,
+        );
+        if (!previous) return { kind: "detail_missing" as const };
+        const damageDelta = detail.jumlah_rusak_pcs - previous.jumlah_rusak_pcs;
+        if (damageDelta > 0) {
+          const stock = await transaction.stok_produk.updateMany({
+            where: {
+              id_varian: detail.id_varian,
+              jumlah_stok: { gte: damageDelta },
+            },
+            data: { jumlah_stok: { decrement: damageDelta } },
+          });
+          if (!stock.count) throw new InsufficientStockError();
+        } else if (damageDelta < 0) {
+          await transaction.stok_produk.upsert({
+            where: { id_varian: detail.id_varian },
+            create: { id_varian: detail.id_varian, jumlah_stok: -damageDelta },
+            update: { jumlah_stok: { increment: -damageDelta } },
+          });
+        }
+        await transaction.detail_produksi.update({
           where: {
-            id_varian: detail.id_varian,
-            jumlah_stok: { gte: damageDelta },
+            id_hasil_id_varian: {
+              id_hasil: productionId,
+              id_varian: detail.id_varian,
+            },
           },
-          data: { jumlah_stok: { decrement: damageDelta } },
-        });
-        if (!stock.count) return { kind: "insufficient_stock" as const };
-      } else if (damageDelta < 0) {
-        await transaction.stok_produk.upsert({
-          where: { id_varian: detail.id_varian },
-          create: { id_varian: detail.id_varian, jumlah_stok: -damageDelta },
-          update: { jumlah_stok: { increment: -damageDelta } },
+          data: { jumlah_rusak_pcs: detail.jumlah_rusak_pcs },
         });
       }
 
       await transaction.produksi.update({
         where: { id_hasil: productionId },
-        data: { jumlah_rusak: damaged, keterangan_kualitas: quality },
-      });
-      await transaction.detail_produksi.update({
-        where: {
-          id_hasil_id_varian: {
-            id_hasil: productionId,
-            id_varian: detail.id_varian,
-          },
-        },
-        data: { jumlah_rusak_pcs: damaged },
+        data: { jumlah_rusak: totalDamaged, keterangan_kualitas: quality },
       });
       return { kind: "updated" as const };
     });
@@ -272,16 +344,19 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ message: "Hasil produksi ini bukan tanggung jawab akun Anda." }, { status: 403 });
       case "detail_missing":
         return NextResponse.json({ message: "Detail varian hasil produksi tidak ditemukan." }, { status: 409 });
-      case "insufficient_stock":
-        return NextResponse.json({ message: "Stok tidak cukup untuk mencatat tambahan produk rusak." }, { status: 409 });
       default:
         return NextResponse.json({ message: "Catatan produk rusak berhasil disimpan." });
     }
   } catch (error) {
+    if (error instanceof InsufficientStockError) {
+      return NextResponse.json({ message: "Stok tidak cukup untuk mencatat tambahan produk rusak." }, { status: 409 });
+    }
     console.error("Production quality update failed.", error);
     return NextResponse.json({ message: "Catatan produk rusak gagal disimpan." }, { status: 500 });
   }
 }
+
+class InsufficientStockError extends Error {}
 
 async function getAuthorizedActor() {
   try {

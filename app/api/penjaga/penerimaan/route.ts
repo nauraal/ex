@@ -14,6 +14,7 @@ export async function GET() {
     const shipments = await prisma.pengiriman.findMany({
       where: {
         penerimaan_produk: { is: null },
+        status_pengiriman: { in: ["dalam_perjalanan", "terkirim"] },
         alokasi_produk: { produk: { id_penjaga_tempat: profile.id_penjaga_tempat } },
       },
       select: {

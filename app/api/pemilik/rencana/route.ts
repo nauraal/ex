@@ -6,7 +6,15 @@ export async function GET() {
   const owner = await getOwner();
   if (owner instanceof NextResponse) return owner;
   try {
+    const ownerProfile = await prisma.pemilik.findUnique({
+      where: { username: owner.username },
+      select: { id_pemilik: true },
+    });
+    if (!ownerProfile) {
+      return NextResponse.json({ message: "Profil operasional pemilik belum tersedia." }, { status: 409 });
+    }
     const plans = await prisma.rencana_produksi.findMany({
+      where: { id_pemilik: ownerProfile.id_pemilik },
       select: {
         id_rencana: true,
         tanggal_produksi: true,
@@ -14,7 +22,12 @@ export async function GET() {
         status_rencana: true,
         catatan: true,
         produk: { select: { nama_produk: true } },
-        varian_produk: { select: { nama_varian: true } },
+        detail_produk: {
+          select: {
+            jumlah_rencana_varian_pcs: true,
+            varian_produk: { select: { nama_varian: true } },
+          },
+        },
       },
       orderBy: [{ tanggal_produksi: "desc" }, { id_rencana: "desc" }],
     });
@@ -76,9 +89,14 @@ export async function POST(request: Request) {
         jumlah_rencana: quantity,
         catatan,
         id_produk: variant.id_produk,
-        id_varian: variant.id_varian,
         id_pemilik: ownerProfile.id_pemilik,
         id_pembuat_donut: variant.produk.id_pembuat_donut,
+        detail_produk: {
+          create: {
+            id_varian: variant.id_varian,
+            jumlah_rencana_varian_pcs: quantity,
+          },
+        },
       },
       select: { id_rencana: true },
     });

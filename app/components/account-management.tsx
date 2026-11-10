@@ -19,10 +19,14 @@ export function AccountCreateForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [success, setSuccess] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving || completed) return;
     setError("");
+    setSuccess("");
     setSaving(true);
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
@@ -37,8 +41,12 @@ export function AccountCreateForm() {
         setError(readMessage(body, "Pengguna gagal disimpan."));
         return;
       }
-      router.push("/dashboard/pemilik/pengguna");
-      router.refresh();
+      setCompleted(true);
+      setSuccess("Pengguna berhasil disimpan. Membuka daftar pengguna...");
+      window.setTimeout(() => {
+        router.push("/dashboard/pemilik/pengguna");
+        router.refresh();
+      }, 700);
     } catch (requestError) {
       console.error("User creation request failed.", requestError);
       setError("Pengguna gagal disimpan. Periksa koneksi lalu coba lagi.");
@@ -71,11 +79,12 @@ export function AccountCreateForm() {
         </label>
       </div>
       <div className="demo-form-footer">
-        <button className="demo-button demo-button-primary" disabled={saving} type="submit">
-          {saving ? "Menyimpan..." : "Simpan Pengguna"}
+        <button className="demo-button demo-button-primary" disabled={saving || completed} type="submit">
+          {completed ? "Tersimpan" : saving ? "Menyimpan..." : "Simpan Pengguna"}
         </button>
         <p className="demo-note">Akun baru menunggu verifikasi. Akun pemilik tidak dapat dibuat dari formulir ini.</p>
         {error ? <p className="demo-error" role="alert">{error}</p> : null}
+        {success ? <p className="demo-success" role="status">{success}</p> : null}
       </div>
     </form>
   );
@@ -95,12 +104,14 @@ export function AccountRowActions({
   const dialog = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function update(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
     setError("");
+    setSuccess("");
     setSaving(true);
     try {
       const response = await fetch(`/api/pemilik/pengguna/${userId}`, {
@@ -118,6 +129,7 @@ export function AccountRowActions({
         return;
       }
       dialog.current?.close();
+      setSuccess("Data pengguna berhasil diperbarui.");
       router.refresh();
     } catch (requestError) {
       console.error("User update request failed.", requestError);
@@ -130,6 +142,7 @@ export function AccountRowActions({
   async function deactivate() {
     if (!window.confirm(`Nonaktifkan akun ${name} (${username})? Data operasional tidak akan dihapus.`)) return;
     setError("");
+    setSuccess("");
     setSaving(true);
     try {
       const response = await fetch(`/api/pemilik/pengguna/${userId}`, { method: "DELETE" });
@@ -138,6 +151,7 @@ export function AccountRowActions({
         setError(readMessage(body, "Pengguna gagal dinonaktifkan."));
         return;
       }
+      setSuccess("Akun berhasil dinonaktifkan.");
       router.refresh();
     } catch (requestError) {
       console.error("User deactivation request failed.", requestError);
@@ -152,6 +166,7 @@ export function AccountRowActions({
       <button className="demo-row-link action-button" disabled={saving} onClick={() => { setError(""); dialog.current?.showModal(); }} type="button">Edit</button>
       {status !== "ditolak" ? <button className="demo-row-link action-button" disabled={saving} onClick={deactivate} type="button">Nonaktifkan</button> : null}
       {error ? <span className="demo-error" role="alert">{error}</span> : null}
+      {success ? <span className="demo-success" role="status">{success}</span> : null}
       <dialog className="account-dialog" ref={dialog}>
         <form className="demo-form" onSubmit={update}>
           <h2>Ubah Data Pengguna</h2>

@@ -100,6 +100,10 @@ export default function DashboardScreen({
     "konfirmasi-pengiriman",
     "konfirmasi-penerimaan",
   ].includes(screen.slug);
+  const hasFormImplementation =
+    isOperationalForm ||
+    (config.role === "pemilik" &&
+      ["produk-form", "pengguna-form"].includes(screen.slug));
 
   return (
     <DashboardShell
@@ -204,12 +208,9 @@ export default function DashboardScreen({
         ) : null}
 
         {screen.kind === "form" &&
-        screen.fields &&
-        !(config.role === "pemilik" && screen.slug === "produk-form") &&
-        !(config.role === "pemilik" && screen.slug === "pengguna-form") &&
-        !isOperationalForm ? (
+        !hasFormImplementation ? (
           <div className="demo-card">
-            <p className="demo-note">Formulir ini belum terhubung ke database dan belum dapat menyimpan data.</p>
+            <p className="demo-note">Formulir ini belum memiliki integrasi penyimpanan dan tidak dapat menyimpan data.</p>
           </div>
         ) : null}
 

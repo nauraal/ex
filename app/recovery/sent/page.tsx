@@ -6,8 +6,11 @@ export default function RecoverySentPage() {
     <main className="account-result-page">
       <Image src="/zazi/logo.png" alt="Zazi Donut" width={90} height={90} />
       <p className="login-role">Pemulihan Akun</p>
-      <h1>Permintaan Terkirim</h1>
-      <p>Instruksi pemulihan ditampilkan sebagai simulasi dan tidak mengirim email.</p>
+      <h1>Pemulihan Belum Aktif</h1>
+      <p>
+        Fitur reset password belum dikonfigurasi. Tidak ada email atau permintaan
+        reset yang dikirim.
+      </p>
       <Link className="demo-button demo-button-primary" href="/login">
         Kembali ke Login
       </Link>

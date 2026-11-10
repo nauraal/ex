@@ -51,6 +51,7 @@ CREATE TABLE varian_produk (
     id_varian   SERIAL PRIMARY KEY,
     nama_varian VARCHAR(50) NOT NULL UNIQUE,
     id_produk   INTEGER NOT NULL,
+    harga       NUMERIC(19,0) NOT NULL CHECK (harga >= 0),
     FOREIGN KEY (id_produk) REFERENCES produk(id_produk) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
@@ -199,24 +200,24 @@ VALUES
     (1, 'Donat', 5000, 'pcs', 1, 2, 3, 4);
 
 -- ---------- Varian produk (V001-V016) ----------
-INSERT INTO varian_produk (id_varian, id_produk, nama_varian)
+INSERT INTO varian_produk (id_varian, id_produk, nama_varian, harga)
 VALUES
-    (1, 1, 'Coklat Meses'),
-    (2, 1, 'Coklat Kacang'),
-    (3, 1, 'Choco Crumble'),
-    (4, 1, 'Choco Crunchy'),
-    (5, 1, 'Red Velvet'),
-    (6, 1, 'Almond'),
-    (7, 1, 'Cheese'),
-    (8, 1, 'Vanila Kacang'),
-    (9, 1, 'Tiramisu'),
-    (10, 1, 'Regal'),
-    (11, 1, 'Matcha'),
-    (12, 1, 'Avocado'),
-    (13, 1, 'Strawberry Meses'),
-    (14, 1, 'Strawberry Choco'),
-    (15, 1, 'Capucino'),
-    (16, 1, 'Capucino Kacang');
+    (1, 1, 'Coklat Meses', 5000),
+    (2, 1, 'Coklat Kacang', 5000),
+    (3, 1, 'Choco Crumble', 5000),
+    (4, 1, 'Choco Crunchy', 5000),
+    (5, 1, 'Red Velvet', 5000),
+    (6, 1, 'Almond', 5000),
+    (7, 1, 'Cheese', 5000),
+    (8, 1, 'Vanila Kacang', 5000),
+    (9, 1, 'Tiramisu', 5000),
+    (10, 1, 'Regal', 5000),
+    (11, 1, 'Matcha', 5000),
+    (12, 1, 'Avocado', 5000),
+    (13, 1, 'Strawberry Meses', 5000),
+    (14, 1, 'Strawberry Choco', 5000),
+    (15, 1, 'Capucino', 5000),
+    (16, 1, 'Capucino Kacang', 5000);
 
 -- ---------- Bahan baku (B001-B017) ----------
 INSERT INTO bahan_baku (id_bahan, nama_bahan, satuan, id_pembuat_donut, id_pemilik)

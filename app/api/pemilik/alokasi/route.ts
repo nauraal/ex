@@ -6,7 +6,15 @@ export async function GET() {
   const owner = await getOwner();
   if (owner instanceof NextResponse) return owner;
   try {
+    const ownerProfile = await prisma.pemilik.findUnique({
+      where: { username: owner.username },
+      select: { id_pemilik: true },
+    });
+    if (!ownerProfile) {
+      return NextResponse.json({ message: "Profil operasional pemilik belum tersedia." }, { status: 409 });
+    }
     const allocations = await prisma.alokasi_produk.findMany({
+      where: { id_pemilik: ownerProfile.id_pemilik },
       select: {
         id_alokasi: true,
         tanggal_alokasi: true,
@@ -42,12 +50,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Data alokasi tidak valid." }, { status: 400 });
   }
   const values = body as Record<string, unknown>;
-  const planId = parsePositiveInteger(values.id_rencana);
+  const planVariant = parsePlanVariant(values.id_rencana_varian);
+  const planId = planVariant?.planId ?? parsePositiveInteger(values.id_rencana);
+  const variantId = planVariant?.variantId ?? parsePositiveInteger(values.id_varian);
   const locationId = parsePositiveInteger(values.id_lokasi);
   const courierUserId = parsePositiveInteger(values.id_pengantar_user);
   const quantity = parsePositiveInteger(values.jumlah_alokasi);
   const date = parseDate(values.tanggal_alokasi);
-  if (planId === null || locationId === null || courierUserId === null || quantity === null || !date) {
+  if (planId === null || variantId === null || locationId === null || courierUserId === null || quantity === null || !date) {
     return NextResponse.json({ message: "Rencana, lokasi, pengantar, jumlah, atau tanggal alokasi tidak valid." }, { status: 400 });
   }
 
@@ -80,25 +90,33 @@ export async function POST(request: Request) {
         select: {
           id_pemilik: true,
           id_produk: true,
-          id_varian: true,
           id_pembuat_donut: true,
           produksi: { select: { id_hasil: true } },
           produk: { select: { id_pengantar: true } },
+          detail_produk: {
+            where: { id_varian: variantId },
+            select: { id_varian: true },
+          },
         },
       });
-      if (!plan || plan.id_pemilik !== ownerProfile.id_pemilik || !plan.produksi) {
+      if (!plan || !plan.detail_produk.length || plan.id_pemilik !== ownerProfile.id_pemilik || !plan.produksi) {
         return { kind: "plan_unavailable" as const };
       }
       if (plan.produk.id_pengantar !== courierProfile.id_pengantar) {
         return { kind: "courier_mismatch" as const };
       }
+      const location = await transaction.lokasi_penjualan.findUnique({
+        where: { id_lokasi: locationId },
+        select: { id_lokasi: true },
+      });
+      if (!location) return { kind: "location_missing" as const };
       const stockUpdate = await transaction.stok_produk.updateMany({
-        where: { id_varian: plan.id_varian, jumlah_stok: { gte: quantity } },
+        where: { id_varian: variantId, jumlah_stok: { gte: quantity } },
         data: { jumlah_stok: { decrement: quantity } },
       });
       if (!stockUpdate.count) return { kind: "insufficient_stock" as const };
       const stock = await transaction.stok_produk.findUniqueOrThrow({
-        where: { id_varian: plan.id_varian },
+        where: { id_varian: variantId },
         select: { jumlah_stok: true },
       });
       const allocation = await transaction.alokasi_produk.create({
@@ -112,7 +130,7 @@ export async function POST(request: Request) {
           id_pengantar: courierProfile.id_pengantar,
           id_produk: plan.id_produk,
           id_lokasi: locationId,
-          id_varian: plan.id_varian,
+          id_varian: variantId,
         },
         select: { id_alokasi: true },
       });
@@ -123,6 +141,9 @@ export async function POST(request: Request) {
     }
     if (result.kind === "courier_mismatch") {
       return NextResponse.json({ message: "Pengantar tidak sesuai dengan penugasan produk." }, { status: 400 });
+    }
+    if (result.kind === "location_missing") {
+      return NextResponse.json({ message: "Lokasi penjualan tidak ditemukan." }, { status: 404 });
     }
     if (result.kind === "insufficient_stock") {
       return NextResponse.json({ message: "Stok produk tidak mencukupi." }, { status: 409 });
@@ -149,6 +170,15 @@ async function getOwner() {
 function parsePositiveInteger(value: unknown) {
   const number = typeof value === "number" ? value : Number(value);
   return Number.isSafeInteger(number) && number > 0 ? number : null;
+}
+
+function parsePlanVariant(value: unknown) {
+  if (typeof value !== "string") return null;
+  const [rawPlanId, rawVariantId, ...extra] = value.split(":");
+  if (extra.length) return null;
+  const planId = parsePositiveInteger(rawPlanId);
+  const variantId = parsePositiveInteger(rawVariantId);
+  return planId && variantId ? { planId, variantId } : null;
 }
 
 function parseDate(value: unknown) {

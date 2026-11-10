@@ -12,10 +12,14 @@ export default function ProductCreateForm({
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [success, setSuccess] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setSuccess("");
+    if (isSaving || isComplete) return;
     setIsSaving(true);
 
     const formData = new FormData(event.currentTarget);
@@ -48,8 +52,12 @@ export default function ProductCreateForm({
         throw new Error("Respons penyimpanan produk tidak valid.");
       }
 
-      router.push(`/dashboard/pemilik/produk/${result.variantId}`);
-      router.refresh();
+      setIsComplete(true);
+      setSuccess("Produk berhasil disimpan. Membuka detail...");
+      window.setTimeout(() => {
+        router.push(`/dashboard/pemilik/produk/${result.variantId}`);
+        router.refresh();
+      }, 700);
     } catch (requestError) {
       console.error("Product form submission failed.", requestError);
       setError("Produk gagal disimpan. Periksa koneksi lalu coba lagi.");
@@ -82,7 +90,7 @@ export default function ProductCreateForm({
           />
         </label>
         <label className="demo-field" htmlFor="harga">
-          <span>Harga satuan (Rp)</span>
+          <span>Harga varian (Rp)</span>
           <input
             id="harga"
             inputMode="numeric"
@@ -172,10 +180,10 @@ export default function ProductCreateForm({
       <div className="demo-form-footer">
         <button
           className="demo-button demo-button-primary"
-          disabled={isSaving || hasMissingAssignees(options)}
+          disabled={isSaving || isComplete || hasMissingAssignees(options)}
           type="submit"
         >
-          {isSaving ? "Menyimpan..." : "Simpan Produk"}
+          {isComplete ? "Tersimpan" : isSaving ? "Menyimpan..." : "Simpan Produk"}
         </button>
         {hasMissingAssignees(options) ? (
           <p className="demo-error" role="alert">
@@ -188,6 +196,7 @@ export default function ProductCreateForm({
             {error}
           </p>
         ) : null}
+        {success ? <p className="demo-success" role="status">{success}</p> : null}
       </div>
     </form>
   );

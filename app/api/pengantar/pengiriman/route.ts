@@ -54,10 +54,16 @@ export async function POST(request: Request) {
   }
   const values = body as Record<string, unknown>;
   const allocationId = parsePositiveInteger(values.id_alokasi);
+  const hasShipmentId =
+    values.id_pengiriman !== undefined && values.id_pengiriman !== "";
+  const shipmentId = hasShipmentId
+    ? parsePositiveInteger(values.id_pengiriman)
+    : null;
   const date = parseDate(values.tanggal_kirim);
   const status = values.status_pengiriman;
   if (
     allocationId === null ||
+    (hasShipmentId && shipmentId === null) ||
     !date ||
     (status !== "dalam_perjalanan" && status !== "terkirim")
   ) {
@@ -71,6 +77,29 @@ export async function POST(request: Request) {
         select: { id_pengantar: true },
       });
       if (!profile) return { kind: "profile_missing" as const };
+      if (shipmentId !== null) {
+        const currentShipment = await transaction.pengiriman.findFirst({
+          where: {
+            id_pengiriman: shipmentId,
+            id_pengantar: profile.id_pengantar,
+            id_alokasi: allocationId,
+          },
+          select: {
+            id_pengiriman: true,
+            penerimaan_produk: { select: { id_penerimaan: true } },
+          },
+        });
+        if (!currentShipment) return { kind: "not_found" as const };
+        if (currentShipment.penerimaan_produk) {
+          return { kind: "already_received" as const };
+        }
+        const updated = await transaction.pengiriman.update({
+          where: { id_pengiriman: currentShipment.id_pengiriman },
+          data: { tanggal_kirim: date, status_pengiriman: status },
+          select: { id_pengiriman: true },
+        });
+        return { kind: "saved" as const, id: updated.id_pengiriman };
+      }
       const allocation = await transaction.alokasi_produk.findFirst({
         where: { id_alokasi: allocationId, id_pengantar: profile.id_pengantar },
         select: {

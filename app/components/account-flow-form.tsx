@@ -22,7 +22,9 @@ export default function AccountFlowForm({
     setMessage("");
 
     if (!isRegistration) {
-      router.push("/recovery/sent");
+      setMessage(
+        "Pemulihan password belum diaktifkan. Tidak ada email atau permintaan reset yang dikirim.",
+      );
       return;
     }
 
@@ -84,7 +86,7 @@ export default function AccountFlowForm({
               {isRegistration ? "Pendaftaran Akun" : "Pemulihan Akun"}
             </p>
             <h2 className="login-heading">
-              {isRegistration ? "Daftar Akun Baru" : "Recovery Password"}
+              {isRegistration ? "Daftar Akun Baru" : "Pemulihan Password Belum Aktif"}
             </h2>
             <form className="account-flow-form" onSubmit={submit}>
               <div className="login-fields">
@@ -127,31 +129,19 @@ export default function AccountFlowForm({
                     </div>
                   </>
                 ) : (
-                  <>
-                    <AccountField
-                      autoComplete="username"
-                      id="recovery-username"
-                      label="Username"
-                      placeholder="Masukkan username"
-                    />
-                    <AccountField
-                      autoComplete="email"
-                      id="recovery-email"
-                      label="Email"
-                      placeholder="Alamat email terdaftar"
-                      type="email"
-                    />
-                  </>
+                  <p>
+                    Alur reset password yang aman belum dikonfigurasi. Tidak ada
+                    alamat email yang dikirim atau disimpan. Hubungi administrator
+                    untuk memulihkan akun.
+                  </p>
                 )}
               </div>
               <div className="login-actions account-flow-actions">
-                <button className="login-action" type="submit">
-                  {isSubmitting
-                    ? "MEMPROSES..."
-                    : isRegistration
-                      ? "DAFTAR"
-                      : "KIRIM"}
-                </button>
+                {isRegistration ? (
+                  <button className="login-action" disabled={isSubmitting} type="submit">
+                    {isSubmitting ? "MEMPROSES..." : "DAFTAR"}
+                  </button>
+                ) : null}
                 <Link className="register-action" href="/login">
                   KEMBALI KE LOGIN
                 </Link>

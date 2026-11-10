@@ -39,20 +39,60 @@ export async function PATCH(
     if (!profile) {
       return NextResponse.json({ message: "Profil operasional pemilik belum tersedia." }, { status: 409 });
     }
-    const updated = await prisma.rencana_produksi.updateMany({
-      where: {
-        id_rencana: id,
-        id_pemilik: profile.id_pemilik,
-        produksi: { is: null },
-      },
-      data: {
-        tanggal_produksi: date,
-        jumlah_rencana: quantity,
-        catatan,
-      },
+    const outcome = await withPrismaTransaction(async (transaction) => {
+      const plan = await transaction.rencana_produksi.findFirst({
+        where: {
+          id_rencana: id,
+          id_pemilik: profile.id_pemilik,
+          produksi: { is: null },
+        },
+        select: {
+          jumlah_rencana: true,
+          detail_produk: {
+            select: {
+              id_varian: true,
+              jumlah_rencana_varian_pcs: true,
+            },
+          },
+        },
+      });
+      if (!plan) return "not_found" as const;
+      const quantityChanged = plan.jumlah_rencana !== quantity;
+      if (quantityChanged && plan.detail_produk.length !== 1) {
+        return "multiple_variants" as const;
+      }
+      const detail = quantityChanged ? plan.detail_produk[0] : undefined;
+      if (quantityChanged && !detail) return "details_missing" as const;
+
+      await transaction.rencana_produksi.update({
+        where: { id_rencana: id },
+        data: {
+          tanggal_produksi: date,
+          jumlah_rencana: quantity,
+          catatan,
+        },
+      });
+      if (detail) {
+        await transaction.detail_produk.update({
+          where: {
+            id_rencana_id_varian: {
+              id_rencana: id,
+              id_varian: detail.id_varian,
+            },
+          },
+          data: { jumlah_rencana_varian_pcs: quantity },
+        });
+      }
+      return "updated" as const;
     });
-    if (updated.count === 0) {
+    if (outcome === "not_found") {
       return NextResponse.json({ message: "Rencana tidak ditemukan atau sudah memiliki hasil produksi." }, { status: 404 });
+    }
+    if (outcome === "multiple_variants") {
+      return NextResponse.json({ message: "Jumlah rencana multi-varian perlu diperbarui per varian." }, { status: 409 });
+    }
+    if (outcome === "details_missing") {
+      return NextResponse.json({ message: "Detail varian pada rencana tidak ditemukan." }, { status: 409 });
     }
     return NextResponse.json({ message: "Rencana produksi berhasil diperbarui." });
   } catch (error) {
@@ -82,11 +122,24 @@ export async function DELETE(
     if (!profile) {
       return NextResponse.json({ message: "Profil operasional pemilik belum tersedia." }, { status: 409 });
     }
-    const [requirements, deleted] = await withPrismaTransaction(async (transaction) => {
+    const outcome = await withPrismaTransaction(async (transaction) => {
+      const plan = await transaction.rencana_produksi.findFirst({
+        where: {
+          id_rencana: id,
+          id_pemilik: profile.id_pemilik,
+          produksi: { is: null },
+        },
+        select: { id_rencana: true },
+      });
+      if (!plan) return "not_found" as const;
+
       const requirements = await transaction.persediaan_bahan.count({
         where: { id_jadwal: id },
       });
-      if (requirements > 0) return [requirements, 0] as const;
+      if (requirements > 0) return "has_requirements" as const;
+      await transaction.detail_produk.deleteMany({
+        where: { id_rencana: id },
+      });
       const deleted = await transaction.rencana_produksi.deleteMany({
         where: {
           id_rencana: id,
@@ -94,12 +147,12 @@ export async function DELETE(
           produksi: { is: null },
         },
       });
-      return [requirements, deleted.count] as const;
+      return deleted.count ? "deleted" as const : "not_found" as const;
     });
-    if (requirements > 0) {
+    if (outcome === "has_requirements") {
       return NextResponse.json({ message: "Rencana dengan catatan kebutuhan bahan tidak dapat dihapus." }, { status: 409 });
     }
-    if (deleted === 0) {
+    if (outcome === "not_found") {
       return NextResponse.json({ message: "Rencana tidak ditemukan atau sudah memiliki hasil produksi." }, { status: 404 });
     }
     return NextResponse.json({ message: "Rencana produksi berhasil dihapus." });

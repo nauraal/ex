@@ -6,8 +6,20 @@ export async function GET() {
   const owner = await getOwner();
   if (owner instanceof NextResponse) return owner;
   try {
+    const ownerProfile = await prisma.pemilik.findUnique({
+      where: { username: owner.username },
+      select: { id_pemilik: true },
+    });
+    if (!ownerProfile) {
+      return NextResponse.json({ message: "Profil operasional pemilik belum tersedia." }, { status: 409 });
+    }
+    const plans = await prisma.rencana_produksi.findMany({
+      where: { id_pemilik: ownerProfile.id_pemilik },
+      select: { id_rencana: true },
+    });
     const [materials, requirements] = await Promise.all([
       prisma.bahan_baku.findMany({
+        where: { id_pemilik: ownerProfile.id_pemilik },
         select: {
           id_bahan: true,
           nama_bahan: true,
@@ -17,6 +29,7 @@ export async function GET() {
         orderBy: { nama_bahan: "asc" },
       }),
       prisma.persediaan_bahan.findMany({
+        where: { id_jadwal: { in: plans.map((plan) => plan.id_rencana) } },
         select: {
           id_persediaan: true,
           id_bahan: true,
@@ -105,7 +118,14 @@ export async function POST(request: Request) {
     const [plan, material] = await Promise.all([
       prisma.rencana_produksi.findUnique({
         where: { id_rencana: planId },
-        select: { id_varian: true, id_pemilik: true, id_pembuat_donut: true },
+        select: {
+          id_pemilik: true,
+          id_pembuat_donut: true,
+          detail_produk: {
+            where: { id_varian: variantId },
+            select: { id_varian: true },
+          },
+        },
       }),
       prisma.bahan_baku.findUnique({
         where: { id_bahan: materialId },
@@ -116,7 +136,7 @@ export async function POST(request: Request) {
       where: { username: owner.username },
       select: { id_pemilik: true },
     });
-    if (!plan || !material || !ownerProfile || plan.id_varian !== variantId) {
+    if (!plan || !material || !ownerProfile || !plan.detail_produk.length) {
       return NextResponse.json({ message: "Kombinasi bahan, rencana, dan varian tidak sesuai." }, { status: 400 });
     }
     if (

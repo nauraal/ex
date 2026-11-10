@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 export type EditableProductVariant = {
   id_varian: number;
   nama_varian: string;
+  harga: string;
   deskripsi: string | null;
   ingredients_donut: string | null;
   ingredients_topping: string | null;
   gambar_url: string | null;
   produk: {
     nama_produk: string;
-    harga: string;
     satuan: string;
   };
 };
@@ -102,8 +102,8 @@ export default function ProductManagement({
             <input defaultValue={variant.nama_varian} maxLength={50} name="nama_varian" required />
           </label>
           <label className="demo-field">
-            <span>Harga satuan (Rp)</span>
-            <input defaultValue={variant.produk.harga} inputMode="numeric" maxLength={19} min="1" name="harga" pattern="[0-9]+" required />
+            <span>Harga varian (Rp)</span>
+            <input defaultValue={variant.harga} inputMode="numeric" maxLength={19} min="1" name="harga" pattern="[0-9]+" required />
           </label>
           <label className="demo-field">
             <span>Satuan</span>

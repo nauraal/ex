@@ -193,6 +193,7 @@ export async function POST(request: Request) {
           varian_produk: {
             create: {
               nama_varian: input.nama_varian,
+              harga: input.harga,
               deskripsi: input.deskripsi,
               ingredients_donut: input.ingredients_donut,
               ingredients_topping: input.ingredients_topping,

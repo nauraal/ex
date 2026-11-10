@@ -40,17 +40,27 @@ export async function PATCH(
 
   try {
     const updated = await withPrismaTransaction(async (transaction) => {
+      const ownerProfile = await transaction.pemilik.findUnique({
+        where: { username: owner.username },
+        select: { id_pemilik: true },
+      });
+      if (!ownerProfile) return null;
+
       const variant = await transaction.varian_produk.findUnique({
         where: { id_varian: id },
-        select: { id_produk: true },
+        select: {
+          id_produk: true,
+          produk: { select: { id_pemilik: true } },
+        },
       });
-      if (!variant) return null;
+      if (!variant || variant.produk.id_pemilik !== ownerProfile.id_pemilik) {
+        return null;
+      }
 
       await transaction.produk.update({
         where: { id_produk: variant.id_produk },
         data: {
           nama_produk: input.nama_produk,
-          harga: input.harga,
           satuan: input.satuan,
         },
       });
@@ -58,6 +68,7 @@ export async function PATCH(
         where: { id_varian: id },
         data: {
           nama_varian: input.nama_varian,
+          harga: input.harga,
           deskripsi: input.deskripsi,
           ingredients_donut: input.ingredients_donut,
           ingredients_topping: input.ingredients_topping,
@@ -96,11 +107,22 @@ export async function DELETE(
 
   try {
     const result = await withPrismaTransaction(async (transaction) => {
+      const ownerProfile = await transaction.pemilik.findUnique({
+        where: { username: owner.username },
+        select: { id_pemilik: true },
+      });
+      if (!ownerProfile) return "not_found" as const;
+
       const variant = await transaction.varian_produk.findUnique({
         where: { id_varian: id },
-        select: { id_produk: true },
+        select: {
+          id_produk: true,
+          produk: { select: { id_pemilik: true } },
+        },
       });
-      if (!variant) return "not_found" as const;
+      if (!variant || variant.produk.id_pemilik !== ownerProfile.id_pemilik) {
+        return "not_found" as const;
+      }
 
       const stock = await transaction.stok_produk.findUnique({
         where: { id_varian: id },

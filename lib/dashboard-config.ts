@@ -40,15 +40,6 @@ export type DemoRow = {
   }[];
 };
 
-export type DemoField = {
-  name: string;
-  label: string;
-  type: "text" | "number" | "date" | "email" | "select" | "textarea";
-  placeholder?: string;
-  defaultValue?: string;
-  options?: string[];
-};
-
 export type DemoScreen = {
   slug: string;
   menuId: string;
@@ -58,9 +49,6 @@ export type DemoScreen = {
   columns?: string[];
   rows?: DemoRow[];
   details?: { label: string; value: string }[];
-  fields?: DemoField[];
-  validation?: "allocation";
-  submitLabel?: string;
   tabs?: { label: string; href: string }[];
   backHref?: string;
   primaryAction?: { label: string; href: string };
@@ -78,20 +66,6 @@ export type DashboardConfig = {
   metrics: { label: string; value: string; tone: string }[];
   screens: DemoScreen[];
 };
-
-const row = (values: string[], href: string, actionLabel = "Lihat") => ({
-  values,
-  href,
-  actionLabel,
-});
-
-const field = (
-  name: string,
-  label: string,
-  type: DemoField["type"] = "text",
-  placeholder?: string,
-  options?: string[],
-): DemoField => ({ name, label, type, placeholder, options });
 
 const ownerModules: DashboardModule[] = [
   { id: "verifikasi", label: "Verifikasi Registrasi" },
@@ -199,17 +173,6 @@ const ownerScreens: DemoScreen[] = [
     description: "Tentukan produk dan target produksi.",
     kind: "form",
     backHref: "rencana",
-    fields: [
-      field("kode", "Kode Rencana Produksi", "text", "RP-004"),
-      field("tanggal", "Tanggal Produksi", "date"),
-      field("produk", "Nama Produk", "select", undefined, [
-        "Donut Cheese",
-        "Donut Chocolate",
-        "Donut Strawberry",
-      ]),
-      field("jumlah", "Jumlah Produksi", "number", "Jumlah produk"),
-      field("catatan", "Catatan", "textarea", "Catatan rencana produksi"),
-    ],
   },
   {
     slug: "bahan",
@@ -230,12 +193,6 @@ const ownerScreens: DemoScreen[] = [
     description: "Catat kebutuhan bahan pada rencana produksi.",
     kind: "form",
     backHref: "bahan",
-    fields: [
-      field("rencana", "Rencana Produksi", "select", undefined, ["RP-001", "RP-002", "RP-003"]),
-      field("bahan", "Nama Bahan", "text", "Nama bahan baku"),
-      field("jumlah", "Jumlah Kebutuhan", "number", "Jumlah"),
-      field("satuan", "Satuan", "select", undefined, ["kg", "gram", "liter", "pcs"]),
-    ],
   },
   {
     slug: "bahan-material-form",
@@ -272,12 +229,6 @@ const ownerScreens: DemoScreen[] = [
     description: "Sesuaikan saldo stok produk yang tersimpan di database.",
     kind: "form",
     backHref: "stok",
-    fields: [
-      field("produk", "Produk", "select", undefined, ["Donut Cheese", "Donut Chocolate", "Donut Strawberry"]),
-      field("jumlah", "Jumlah Produk", "number", "Jumlah"),
-      field("tanggal", "Tanggal Pencatatan", "date"),
-      field("catatan", "Catatan", "textarea", "Catatan stok"),
-    ],
   },
   {
     slug: "alokasi",
@@ -294,13 +245,10 @@ const ownerScreens: DemoScreen[] = [
     slug: "alokasi-lokasi",
     menuId: "alokasi",
     title: "Pilih Lokasi Penjualan",
-    description: "Tentukan lokasi tujuan dan jumlah produk yang dikirim.",
+    description: "Pilih lokasi tujuan berdasarkan data yang tersimpan.",
     kind: "table",
-    columns: ["No.", "Lokasi", "Penjaga Tempat", "Kapasitas", "Aksi"],
-    rows: [
-      row(["1", "Zazi Donut - Bandung", "Rina Kurnia", "50 pcs"], "alokasi-form", "Pilih"),
-      row(["2", "Zazi Donut - Cimahi", "Sari Wulandari", "40 pcs"], "alokasi-form", "Pilih"),
-    ],
+    columns: ["No.", "Lokasi", "Alamat", "Aksi"],
+    rows: [],
     backHref: "alokasi",
   },
   {
@@ -309,11 +257,8 @@ const ownerScreens: DemoScreen[] = [
     title: "Riwayat Alokasi Produk",
     description: "Daftar produk yang telah dialokasikan ke setiap lokasi.",
     kind: "table",
-    columns: ["No.", "Kode Alokasi", "Produk", "Lokasi", "Jumlah", "Status", "Aksi"],
-    rows: [
-      row(["1", "AL-001", "Donut Cheese", "Bandung", "50 pcs", "Dikirim"], "laporan-detail"),
-      row(["2", "AL-002", "Donut Chocolate", "Cimahi", "40 pcs", "Dikirim"], "laporan-detail"),
-    ],
+    columns: ["No.", "Kode Alokasi", "Produk", "Lokasi", "Jumlah", "Tanggal Alokasi", "Status", "Aksi"],
+    rows: [],
     backHref: "alokasi",
   },
   {
@@ -322,16 +267,8 @@ const ownerScreens: DemoScreen[] = [
     title: "Tambah Alokasi Produk",
     description: "Tentukan lokasi dan jumlah produk yang dialokasikan.",
     kind: "form",
-    backHref: "alokasi-lokasi",
-    fields: [
-      field("rencana", "Kode Rencana Produksi", "select", undefined, ["RP-001", "RP-002"]),
-      field("lokasi", "Lokasi Penjualan", "select", undefined, ["Zazi Donut - Bandung", "Zazi Donut - Cimahi"]),
-      field("jumlah", "Jumlah Produk", "number", "Jumlah produk"),
-      field("pengantar", "Pengantar", "select", undefined, ["Dimas Saputra", "Andi Pratama"]),
-      field("tanggal", "Tanggal Pengiriman", "date"),
-    ],
-    validation: "allocation",
-    note: "Jumlah yang melebihi kapasitas lokasi akan ditandai sebagai kesalahan simulasi.",
+    backHref: "alokasi",
+    secondaryAction: { label: "Pilih Lokasi", href: "alokasi-lokasi" },
   },
   {
     slug: "laporan",
@@ -359,14 +296,6 @@ const ownerScreens: DemoScreen[] = [
     description: "Rincian target, hasil produksi, dan produk yang rusak.",
     kind: "detail",
     backHref: "laporan",
-    details: [
-      { label: "Kode rencana", value: "RP-001" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Target produksi", value: "120 pcs" },
-      { label: "Hasil layak", value: "116 pcs" },
-      { label: "Produk rusak", value: "4 pcs" },
-      { label: "Tanggal produksi", value: "12 Juni 2026" },
-    ],
   },
 ];
 
@@ -384,26 +313,15 @@ const makerScreens: DemoScreen[] = [
     description: "Pilih rencana produksi yang sedang dikerjakan.",
     kind: "table",
     columns: ["No.", "Kode Rencana", "Produk", "Target", "Tanggal", "Status", "Aksi"],
-    rows: [
-      row(["1", "RP-001", "Donut Cheese", "120 pcs", "12/06/2026", "Menunggu hasil"], "hasil-produksi-detail"),
-      row(["2", "RP-002", "Donut Chocolate", "100 pcs", "13/06/2026", "Dalam proses"], "hasil-produksi-detail"),
-    ],
+    rows: [],
   },
   {
     slug: "hasil-produksi-detail",
     menuId: "hasil-produksi",
-    title: "Detail Rencana Produksi RP-001",
+    title: "Detail Rencana Produksi",
     description: "Rencana kerja dan hasil produksi yang perlu dicatat.",
     kind: "detail",
     backHref: "hasil-produksi",
-    details: [
-      { label: "Kode rencana", value: "RP-001" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Target produksi", value: "120 pcs" },
-      { label: "Tanggal produksi", value: "12 Juni 2026" },
-      { label: "Bahan yang disiapkan", value: "Tepung, gula, telur, keju" },
-    ],
-    primaryAction: { label: "Catat Hasil Produksi", href: "catat-hasil" },
   },
   {
     slug: "catat-hasil",
@@ -411,11 +329,7 @@ const makerScreens: DemoScreen[] = [
     title: "Catat Hasil Produksi",
     description: "Catat jumlah hasil produksi untuk rencana yang dikerjakan.",
     kind: "form",
-    backHref: "hasil-produksi-detail",
-    fields: [
-      field("hasil", "Jumlah Hasil Produksi (buah)", "number", "Masukkan jumlah hasil produksi"),
-    ],
-    submitLabel: "Catat Hasil Produksi",
+    backHref: "hasil-produksi",
   },
   {
     slug: "bahan-baku",
@@ -424,11 +338,7 @@ const makerScreens: DemoScreen[] = [
     description: "Periksa stok bahan yang tersedia untuk produksi.",
     kind: "table",
     columns: ["No.", "Nama Bahan", "Stok", "Satuan", "Status", "Aksi"],
-    rows: [
-      row(["1", "Tepung Terigu", "18", "kg", "Tersedia"], "bahan-baku-detail"),
-      row(["2", "Gula", "9", "kg", "Menipis"], "bahan-baku-detail"),
-      row(["3", "Keju", "7", "kg", "Menipis"], "bahan-baku-detail"),
-    ],
+    rows: [],
   },
   {
     slug: "bahan-baku-detail",
@@ -437,13 +347,6 @@ const makerScreens: DemoScreen[] = [
     description: "Lihat stok dan catat bahan yang digunakan.",
     kind: "detail",
     backHref: "bahan-baku",
-    details: [
-      { label: "Nama bahan", value: "Tepung Terigu" },
-      { label: "Stok tersedia", value: "18 kg" },
-      { label: "Kebutuhan RP-001", value: "10 kg" },
-      { label: "Lokasi penyimpanan", value: "Gudang Produksi" },
-    ],
-    primaryAction: { label: "Catat Penggunaan", href: "catat-penggunaan" },
   },
   {
     slug: "catat-penggunaan",
@@ -451,14 +354,7 @@ const makerScreens: DemoScreen[] = [
     title: "Catat Penggunaan Bahan Baku",
     description: "Catat penggunaan bahan untuk rencana yang dikerjakan.",
     kind: "form",
-    backHref: "bahan-baku-detail",
-    fields: [
-      field("rencana", "Kode Rencana Produksi", "select", undefined, ["RP-001", "RP-002"]),
-      field("bahan", "Nama Bahan", "select", undefined, ["Tepung Terigu", "Gula", "Keju"]),
-      field("jumlah", "Jumlah Digunakan", "number", "Jumlah"),
-      field("satuan", "Satuan", "select", undefined, ["kg", "gram", "liter", "pcs"]),
-      field("tanggal", "Tanggal Penggunaan", "date"),
-    ],
+    backHref: "bahan-baku",
   },
   {
     slug: "kualitas-hasil",
@@ -467,10 +363,7 @@ const makerScreens: DemoScreen[] = [
     description: "Tinjau hasil produksi dan catatan kualitas.",
     kind: "table",
     columns: ["No.", "Kode Rencana", "Produk", "Produk Layak", "Produk Rusak", "Status", "Aksi"],
-    rows: [
-      row(["1", "RP-001", "Donut Cheese", "116 pcs", "4 pcs", "Perlu tindak lanjut"], "kualitas-detail"),
-      row(["2", "RP-002", "Donut Chocolate", "100 pcs", "0 pcs", "Baik"], "kualitas-detail"),
-    ],
+    rows: [],
     primaryAction: { label: "Catat Produk Rusak", href: "catat-rusak" },
   },
   {
@@ -480,14 +373,6 @@ const makerScreens: DemoScreen[] = [
     description: "Periksa catatan kualitas dari hasil produksi.",
     kind: "detail",
     backHref: "kualitas-hasil",
-    details: [
-      { label: "Kode rencana", value: "RP-001" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Produk layak", value: "116 pcs" },
-      { label: "Produk rusak", value: "4 pcs" },
-      { label: "Catatan", value: "Kemasan rusak pada beberapa produk." },
-    ],
-    primaryAction: { label: "Catat Produk Rusak", href: "catat-rusak" },
   },
   {
     slug: "catat-rusak",
@@ -496,13 +381,6 @@ const makerScreens: DemoScreen[] = [
     description: "Tambahkan catatan produk yang tidak memenuhi kualitas.",
     kind: "form",
     backHref: "kualitas-hasil",
-    fields: [
-      field("rencana", "Kode Rencana Produksi", "select", undefined, ["RP-001", "RP-002"]),
-      field("produk", "Nama Produk", "select", undefined, ["Donut Cheese", "Donut Chocolate"]),
-      field("jumlah", "Jumlah Produk Rusak", "number", "Jumlah"),
-      field("alasan", "Alasan Kerusakan", "select", undefined, ["Bentuk tidak sesuai", "Kemasan rusak", "Produk gosong"]),
-      field("catatan", "Keterangan", "textarea", "Keterangan tambahan"),
-    ],
   },
 ];
 
@@ -521,10 +399,7 @@ const courierScreens: DemoScreen[] = [
     kind: "table",
     primaryAction: { label: "Perbarui Status Pengiriman", href: "konfirmasi-pengiriman" },
     columns: ["No.", "Kode Pengiriman", "Tujuan", "Produk", "Jumlah", "Status", "Aksi"],
-    rows: [
-      row(["1", "AL-001", "Zazi Donut - Bandung", "Donut Cheese", "50 pcs", "Siap dikirim"], "pengiriman-detail"),
-      row(["2", "AL-002", "Zazi Donut - Cimahi", "Donut Chocolate", "40 pcs", "Dalam perjalanan"], "pengiriman-detail"),
-    ],
+    rows: [],
   },
   {
     slug: "pengiriman-detail",
@@ -533,15 +408,6 @@ const courierScreens: DemoScreen[] = [
     description: "Periksa tujuan dan barang sebelum mengonfirmasi pengiriman.",
     kind: "detail",
     backHref: "pengiriman",
-    details: [
-      { label: "Kode alokasi", value: "AL-001" },
-      { label: "Rencana produksi", value: "RP-001" },
-      { label: "Tujuan", value: "Zazi Donut - Bandung" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Jumlah", value: "50 pcs" },
-      { label: "Status", value: "Siap dikirim" },
-    ],
-    primaryAction: { label: "Perbarui Status Pengiriman", href: "konfirmasi-pengiriman" },
   },
   {
     slug: "konfirmasi-pengiriman",
@@ -549,14 +415,7 @@ const courierScreens: DemoScreen[] = [
     title: "Perbarui Status Pengiriman",
     description: "Catat waktu dan status perjalanan produk.",
     kind: "form",
-    backHref: "pengiriman-detail",
-    fields: [
-      field("pengiriman", "Kode Pengiriman", "select", undefined, ["AL-001", "AL-002"]),
-      field("status", "Status Pengiriman", "select", undefined, ["Dalam perjalanan", "Selesai dikirim"]),
-      field("tanggal", "Tanggal Pengiriman", "date"),
-      field("waktu", "Waktu Pengiriman", "text", "Contoh: 10:30"),
-      field("catatan", "Catatan", "textarea", "Catatan pengiriman"),
-    ],
+    backHref: "pengiriman",
   },
   {
     slug: "riwayat-pengiriman",
@@ -565,10 +424,7 @@ const courierScreens: DemoScreen[] = [
     description: "Daftar pengiriman yang telah diselesaikan.",
     kind: "table",
     columns: ["No.", "Kode Pengiriman", "Tujuan", "Produk", "Tanggal", "Status", "Aksi"],
-    rows: [
-      row(["1", "AL-013", "Zazi Donut - Bandung", "Donut Cheese", "10/06/2026", "Diterima"], "riwayat-detail"),
-      row(["2", "AL-012", "Zazi Donut - Cimahi", "Donut Strawberry", "09/06/2026", "Diterima"], "riwayat-detail"),
-    ],
+    rows: [],
   },
   {
     slug: "riwayat-detail",
@@ -577,14 +433,6 @@ const courierScreens: DemoScreen[] = [
     description: "Informasi perjalanan dan penerimaan produk.",
     kind: "detail",
     backHref: "riwayat-pengiriman",
-    details: [
-      { label: "Kode pengiriman", value: "AL-013" },
-      { label: "Tujuan", value: "Zazi Donut - Bandung" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Jumlah", value: "50 pcs" },
-      { label: "Tanggal diterima", value: "10 Juni 2026" },
-      { label: "Status", value: "Diterima oleh penjaga tempat" },
-    ],
   },
   {
     slug: "informasi-produk",
@@ -593,10 +441,7 @@ const courierScreens: DemoScreen[] = [
     description: "Lihat produk dan jumlah yang telah dialokasikan.",
     kind: "table",
     columns: ["No.", "Kode Produk", "Nama Produk", "Varian", "Jumlah", "Tujuan", "Aksi"],
-    rows: [
-      row(["1", "P-001", "Donut", "Cheese", "50 pcs", "Bandung"], "produk-detail"),
-      row(["2", "P-002", "Donut", "Chocolate", "40 pcs", "Cimahi"], "produk-detail"),
-    ],
+    rows: [],
   },
   {
     slug: "produk-detail",
@@ -605,13 +450,6 @@ const courierScreens: DemoScreen[] = [
     description: "Periksa ringkasan produk yang akan dibawa.",
     kind: "detail",
     backHref: "informasi-produk",
-    details: [
-      { label: "Kode produk", value: "P-001" },
-      { label: "Nama produk", value: "Donut" },
-      { label: "Varian", value: "Cheese" },
-      { label: "Jumlah dialokasikan", value: "50 pcs" },
-      { label: "Tujuan pengiriman", value: "Zazi Donut - Bandung" },
-    ],
   },
 ];
 
@@ -630,10 +468,7 @@ const guardScreens: DemoScreen[] = [
     kind: "table",
     primaryAction: { label: "Konfirmasi Penerimaan", href: "konfirmasi-penerimaan" },
     columns: ["No.", "Kode Pengiriman", "Pengantar", "Produk", "Jumlah", "Tanggal", "Aksi"],
-    rows: [
-      row(["1", "AL-001", "Dimas Saputra", "Donut Cheese", "50 pcs", "12/06/2026"], "detail-penerimaan"),
-      row(["2", "AL-002", "Andi Pratama", "Donut Chocolate", "40 pcs", "12/06/2026"], "detail-penerimaan"),
-    ],
+    rows: [],
   },
   {
     slug: "detail-penerimaan",
@@ -642,15 +477,6 @@ const guardScreens: DemoScreen[] = [
     description: "Cocokkan informasi produk dengan barang yang datang.",
     kind: "detail",
     backHref: "menerima-produk",
-    details: [
-      { label: "Kode pengiriman", value: "AL-001" },
-      { label: "Pengantar", value: "Dimas Saputra" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Jumlah dikirim", value: "50 pcs" },
-      { label: "Tujuan", value: "Zazi Donut - Bandung" },
-      { label: "Status", value: "Menunggu penerimaan" },
-    ],
-    primaryAction: { label: "Konfirmasi Penerimaan", href: "konfirmasi-penerimaan" },
   },
   {
     slug: "konfirmasi-penerimaan",
@@ -658,14 +484,7 @@ const guardScreens: DemoScreen[] = [
     title: "Konfirmasi Penerimaan Produk",
     description: "Catat hasil pemeriksaan barang yang diterima.",
     kind: "form",
-    backHref: "detail-penerimaan",
-    fields: [
-      field("pengiriman", "Kode Pengiriman", "select", undefined, ["AL-001", "AL-002"]),
-      field("diterima", "Jumlah Produk Diterima", "number", "Jumlah"),
-      field("kondisi", "Kondisi Produk", "select", undefined, ["Baik", "Sebagian rusak", "Rusak"]),
-      field("tanggal", "Tanggal Penerimaan", "date"),
-      field("catatan", "Catatan Penerimaan", "textarea", "Keterangan kondisi produk"),
-    ],
+    backHref: "menerima-produk",
   },
   {
     slug: "status-pengiriman",
@@ -674,10 +493,7 @@ const guardScreens: DemoScreen[] = [
     description: "Pantau pengiriman yang menuju lokasi Anda.",
     kind: "table",
     columns: ["No.", "Kode Pengiriman", "Pengantar", "Produk", "Perkiraan Tiba", "Status", "Aksi"],
-    rows: [
-      row(["1", "AL-001", "Dimas Saputra", "Donut Cheese", "10:30", "Dalam perjalanan"], "detail-status"),
-      row(["2", "AL-002", "Andi Pratama", "Donut Chocolate", "11:00", "Dalam perjalanan"], "detail-status"),
-    ],
+    rows: [],
   },
   {
     slug: "detail-status",
@@ -686,15 +502,6 @@ const guardScreens: DemoScreen[] = [
     description: "Lihat informasi pengiriman menuju lokasi.",
     kind: "detail",
     backHref: "status-pengiriman",
-    details: [
-      { label: "Kode pengiriman", value: "AL-001" },
-      { label: "Nama pengantar", value: "Dimas Saputra" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Jumlah", value: "50 pcs" },
-      { label: "Perkiraan tiba", value: "12 Juni 2026, 10:30" },
-      { label: "Status", value: "Dalam perjalanan" },
-    ],
-    primaryAction: { label: "Buka Penerimaan", href: "menerima-produk" },
   },
   {
     slug: "riwayat-penerimaan",
@@ -703,10 +510,7 @@ const guardScreens: DemoScreen[] = [
     description: "Daftar produk yang telah diterima di lokasi.",
     kind: "table",
     columns: ["No.", "Kode Pengiriman", "Produk", "Jumlah Diterima", "Tanggal", "Kondisi", "Aksi"],
-    rows: [
-      row(["1", "AL-013", "Donut Cheese", "50 pcs", "10/06/2026", "Baik"], "riwayat-penerimaan-detail"),
-      row(["2", "AL-012", "Donut Strawberry", "40 pcs", "09/06/2026", "Baik"], "riwayat-penerimaan-detail"),
-    ],
+    rows: [],
   },
   {
     slug: "riwayat-penerimaan-detail",
@@ -715,13 +519,6 @@ const guardScreens: DemoScreen[] = [
     description: "Rincian produk yang telah diterima.",
     kind: "detail",
     backHref: "riwayat-penerimaan",
-    details: [
-      { label: "Kode pengiriman", value: "AL-013" },
-      { label: "Produk", value: "Donut Cheese" },
-      { label: "Jumlah diterima", value: "50 pcs" },
-      { label: "Tanggal penerimaan", value: "10 Juni 2026" },
-      { label: "Kondisi produk", value: "Baik" },
-    ],
   },
 ];
 

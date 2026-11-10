@@ -114,9 +114,9 @@ export async function getRegistrationHistoryRows() {
   return history.map((entry, index) => ({
     values: [
       String(index + 1),
-      entry.pengguna.nama,
-      entry.pengguna.username,
-      formatRole(entry.pengguna.role),
+      entry.pengguna?.nama ?? "Pengguna tidak tersedia",
+      entry.pengguna?.username ?? "—",
+      entry.pengguna ? formatRole(entry.pengguna.role) : "—",
       formatRegistrationStatus(entry.status_registrasi),
       entry.waktu_perubahan.toLocaleString("id-ID", {
         dateStyle: "medium",
@@ -157,15 +157,22 @@ export async function getProductFormOptions(): Promise<ProductFormOptions> {
   };
 }
 
-export async function getProductVariantRows() {
+export async function getProductVariantRows(ownerUsername: string) {
+  const owner = await prisma.pemilik.findUnique({
+    where: { username: ownerUsername },
+    select: { id_pemilik: true },
+  });
+  if (!owner) return [];
+
   const variants = await prisma.varian_produk.findMany({
+    where: { produk: { id_pemilik: owner.id_pemilik } },
     select: {
       id_varian: true,
       nama_varian: true,
+      harga: true,
       produk: {
         select: {
           nama_produk: true,
-          harga: true,
           satuan: true,
         },
       },
@@ -178,7 +185,7 @@ export async function getProductVariantRows() {
       String(index + 1),
       variant.produk.nama_produk,
       variant.nama_varian,
-      formatRupiah(variant.produk.harga.toFixed(0)),
+      formatRupiah(variant.harga.toFixed(0)),
       "—",
     ],
     href: `produk/${variant.id_varian}`,
@@ -188,12 +195,22 @@ export async function getProductVariantRows() {
   }));
 }
 
-export async function getProductVariantDetail(id: number) {
-  return prisma.varian_produk.findUnique({
-    where: { id_varian: id },
+export async function getProductVariantDetail(id: number, ownerUsername: string) {
+  const owner = await prisma.pemilik.findUnique({
+    where: { username: ownerUsername },
+    select: { id_pemilik: true },
+  });
+  if (!owner) return null;
+
+  return prisma.varian_produk.findFirst({
+    where: {
+      id_varian: id,
+      produk: { id_pemilik: owner.id_pemilik },
+    },
     select: {
       id_varian: true,
       nama_varian: true,
+      harga: true,
       deskripsi: true,
       ingredients_donut: true,
       ingredients_topping: true,
@@ -201,7 +218,6 @@ export async function getProductVariantDetail(id: number) {
       produk: {
         select: {
           nama_produk: true,
-          harga: true,
           satuan: true,
         },
       },
