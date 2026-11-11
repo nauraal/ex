@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { syncOperationalProfile } from "../../../../lib/account-profiles";
 import { getAuthenticatedUser } from "../../../../lib/auth";
 import { prisma, withPrismaTransaction } from "../../../../lib/prisma";
 
@@ -68,8 +69,7 @@ export async function POST(request: Request) {
     !username ||
     password.length === 0 ||
     new TextEncoder().encode(password).byteLength > 72 ||
-    typeof role !== "string" ||
-    !REGISTRATION_ROLES.includes(role as (typeof REGISTRATION_ROLES)[number])
+    !isRegistrationRole(role)
   ) {
     return NextResponse.json({ message: "Nama, username, password, atau role tidak valid." }, { status: 400 });
   }
@@ -86,6 +86,12 @@ export async function POST(request: Request) {
           status_registrasi: "menunggu_verifikasi",
         },
         select: { id_user: true, nama: true, username: true, role: true },
+      });
+      await syncOperationalProfile(transaction, {
+        nama: created.nama,
+        username: created.username,
+        role,
+        status_registrasi: "menunggu_verifikasi",
       });
       await transaction.riwayat_registrasi.create({
         data: {
@@ -104,6 +110,15 @@ export async function POST(request: Request) {
     console.error("User creation failed.", error);
     return NextResponse.json({ message: "Pengguna gagal disimpan." }, { status: 500 });
   }
+}
+
+function isRegistrationRole(
+  role: unknown,
+): role is (typeof REGISTRATION_ROLES)[number] {
+  return (
+    typeof role === "string" &&
+    REGISTRATION_ROLES.some((candidate) => candidate === role)
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

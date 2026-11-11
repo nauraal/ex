@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/auth";
+import { syncOperationalProfile } from "../../../../../lib/account-profiles";
+import { getAuthenticatedUser, isAuthRole } from "../../../../../lib/auth";
 import { withPrismaTransaction } from "../../../../../lib/prisma";
 
 function isRegistrationDecision(
@@ -80,6 +81,8 @@ export async function PATCH(
         where: { id_user: id },
         select: {
           id_user: true,
+          nama: true,
+          username: true,
           status_registrasi: true,
           role: true,
         },
@@ -87,6 +90,8 @@ export async function PATCH(
 
       if (
         !registrant ||
+        !isAuthRole(registrant.role) ||
+        registrant.role === "pemilik" ||
         !["pembuat_donut", "pengantar", "penjaga_tempat"].includes(
           registrant.role,
         )
@@ -118,6 +123,13 @@ export async function PATCH(
           status: current?.status_registrasi ?? "tidak ditemukan",
         };
       }
+
+      await syncOperationalProfile(transaction, {
+        nama: registrant.nama,
+        username: registrant.username,
+        role: registrant.role,
+        status_registrasi: status,
+      });
 
       await transaction.riwayat_registrasi.create({
         data: {

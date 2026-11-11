@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { syncOperationalProfile } from "../../../../lib/account-profiles";
 import { withPrismaTransaction } from "../../../../lib/prisma";
 
 const REGISTRATION_ROLES = [
@@ -84,6 +85,13 @@ export async function POST(request: Request) {
           status_registrasi: "menunggu_verifikasi",
         },
         select: { id_user: true },
+      });
+
+      await syncOperationalProfile(transaction, {
+        nama,
+        username,
+        role,
+        status_registrasi: "menunggu_verifikasi",
       });
 
       await transaction.riwayat_registrasi.create({

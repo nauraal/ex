@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "../../../../../lib/auth";
+import { syncOperationalProfile } from "../../../../../lib/account-profiles";
+import { getAuthenticatedUser, isAuthRole } from "../../../../../lib/auth";
 import { withPrismaTransaction } from "../../../../../lib/prisma";
 
 const REGISTRATION_STATUSES = [
@@ -63,9 +64,15 @@ export async function PATCH(
     const result = await withPrismaTransaction(async (transaction) => {
       const current = await transaction.users.findUnique({
         where: { id_user: id },
-        select: { id_user: true, role: true, status_registrasi: true },
+        select: {
+          id_user: true,
+          nama: true,
+          username: true,
+          role: true,
+          status_registrasi: true,
+        },
       });
-      if (!current || current.role === "pemilik") {
+      if (!current || current.role === "pemilik" || !isAuthRole(current.role)) {
         return { kind: "not_found" as const };
       }
 
@@ -86,6 +93,16 @@ export async function PATCH(
           status_registrasi: true,
         },
       });
+      await syncOperationalProfile(
+        transaction,
+        {
+          nama: user.nama,
+          username: user.username,
+          role: current.role,
+          status_registrasi: user.status_registrasi,
+        },
+        current.username,
+      );
       if (nextStatus !== current.status_registrasi) {
         await transaction.riwayat_registrasi.create({
           data: {
@@ -136,9 +153,15 @@ export async function DELETE(
     const result = await withPrismaTransaction(async (transaction) => {
       const target = await transaction.users.findUnique({
         where: { id_user: id },
-        select: { id_user: true, role: true, status_registrasi: true },
+        select: {
+          id_user: true,
+          nama: true,
+          username: true,
+          role: true,
+          status_registrasi: true,
+        },
       });
-      if (!target || target.role === "pemilik") {
+      if (!target || target.role === "pemilik" || !isAuthRole(target.role)) {
         return { kind: "not_found" as const };
       }
       if (target.status_registrasi === "ditolak") {
@@ -147,6 +170,12 @@ export async function DELETE(
       await transaction.users.update({
         where: { id_user: id },
         data: { status_registrasi: "ditolak" },
+      });
+      await syncOperationalProfile(transaction, {
+        nama: target.nama,
+        username: target.username,
+        role: target.role,
+        status_registrasi: "ditolak",
       });
       await transaction.riwayat_registrasi.create({
         data: {

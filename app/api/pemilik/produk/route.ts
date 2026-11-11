@@ -1,6 +1,5 @@
-import { randomBytes } from "node:crypto";
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { syncOperationalProfile } from "../../../../lib/account-profiles";
 import { getAuthenticatedUser } from "../../../../lib/auth";
 import { prisma, withPrismaTransaction } from "../../../../lib/prisma";
 
@@ -112,73 +111,33 @@ export async function POST(request: Request) {
       assignees[role] = assignee;
     }
 
-    const [ownerProfileHash, makerProfileHash, courierProfileHash, guardProfileHash] =
-      await Promise.all([
-        createUnavailablePasswordHash(),
-        createUnavailablePasswordHash(),
-        createUnavailablePasswordHash(),
-        createUnavailablePasswordHash(),
-      ]);
-
     const created = await withPrismaTransaction(async (tx) => {
-      const ownerProfile = await tx.pemilik.upsert({
-        where: { username: owner.username },
-        update: {
-          nama_pemilik: owner.nama,
-          status_registrasi: "aktif",
-        },
-        create: {
-          nama_pemilik: owner.nama,
-          username: owner.username,
-          password_hash: ownerProfileHash,
-          status_registrasi: "aktif",
-        },
-        select: { id_pemilik: true },
+      const ownerProfile = await syncOperationalProfile(tx, {
+        nama: owner.nama,
+        username: owner.username,
+        role: "pemilik",
+        status_registrasi: "aktif",
       });
 
-      const makerProfile = await tx.pembuat_donut.upsert({
-        where: { username: assignees.pembuat_donut.username },
-        update: {
-          nama_pembuat_donut: assignees.pembuat_donut.nama,
-          status_registrasi: "aktif",
-        },
-        create: {
-          nama_pembuat_donut: assignees.pembuat_donut.nama,
-          username: assignees.pembuat_donut.username,
-          password_hash: makerProfileHash,
-          status_registrasi: "aktif",
-        },
-        select: { id_pembuat_donut: true },
+      const makerProfile = await syncOperationalProfile(tx, {
+        nama: assignees.pembuat_donut.nama,
+        username: assignees.pembuat_donut.username,
+        role: "pembuat_donut",
+        status_registrasi: "aktif",
       });
 
-      const courierProfile = await tx.pengantar.upsert({
-        where: { username: assignees.pengantar.username },
-        update: {
-          nama_pengantar: assignees.pengantar.nama,
-          status_registrasi: "aktif",
-        },
-        create: {
-          nama_pengantar: assignees.pengantar.nama,
-          username: assignees.pengantar.username,
-          password_hash: courierProfileHash,
-          status_registrasi: "aktif",
-        },
-        select: { id_pengantar: true },
+      const courierProfile = await syncOperationalProfile(tx, {
+        nama: assignees.pengantar.nama,
+        username: assignees.pengantar.username,
+        role: "pengantar",
+        status_registrasi: "aktif",
       });
 
-      const guardProfile = await tx.penjaga_tempat.upsert({
-        where: { username: assignees.penjaga_tempat.username },
-        update: {
-          nama_penjaga_tempat: assignees.penjaga_tempat.nama,
-          status_registrasi: "aktif",
-        },
-        create: {
-          nama_penjaga_tempat: assignees.penjaga_tempat.nama,
-          username: assignees.penjaga_tempat.username,
-          password_hash: guardProfileHash,
-          status_registrasi: "aktif",
-        },
-        select: { id_penjaga_tempat: true },
+      const guardProfile = await syncOperationalProfile(tx, {
+        nama: assignees.penjaga_tempat.nama,
+        username: assignees.penjaga_tempat.username,
+        role: "penjaga_tempat",
+        status_registrasi: "aktif",
       });
 
       return tx.produk.create({
@@ -186,10 +145,10 @@ export async function POST(request: Request) {
           nama_produk: input.nama_produk,
           harga: input.harga,
           satuan: input.satuan,
-          id_pemilik: ownerProfile.id_pemilik,
-          id_pembuat_donut: makerProfile.id_pembuat_donut,
-          id_pengantar: courierProfile.id_pengantar,
-          id_penjaga_tempat: guardProfile.id_penjaga_tempat,
+          id_pemilik: ownerProfile.id,
+          id_pembuat_donut: makerProfile.id,
+          id_pengantar: courierProfile.id,
+          id_penjaga_tempat: guardProfile.id,
           varian_produk: {
             create: {
               nama_varian: input.nama_varian,
@@ -232,12 +191,6 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
-
-async function createUnavailablePasswordHash() {
-  // Legacy role tables are operational profiles; authentication remains in users.
-  const secret = randomBytes(32).toString("base64url");
-  return bcrypt.hash(secret, 12);
 }
 
 function parseProductInput(body: unknown): ProductInput | null {

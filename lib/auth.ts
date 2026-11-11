@@ -125,5 +125,37 @@ export async function requireDashboardRole(role: AuthRole) {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/login");
   if (user.role !== role) redirect(dashboardPath(user.role));
+  const profile = await findOperationalProfile(role, user.username);
+  if (
+    !profile ||
+    profile.status_registrasi.trim().toLowerCase() !== "aktif"
+  ) {
+    redirect("/profile-unavailable");
+  }
   return user;
+}
+
+async function findOperationalProfile(role: AuthRole, username: string) {
+  switch (role) {
+    case "pemilik":
+      return prisma.pemilik.findUnique({
+        where: { username },
+        select: { status_registrasi: true },
+      });
+    case "pembuat_donut":
+      return prisma.pembuat_donut.findUnique({
+        where: { username },
+        select: { status_registrasi: true },
+      });
+    case "pengantar":
+      return prisma.pengantar.findUnique({
+        where: { username },
+        select: { status_registrasi: true },
+      });
+    case "penjaga_tempat":
+      return prisma.penjaga_tempat.findUnique({
+        where: { username },
+        select: { status_registrasi: true },
+      });
+  }
 }
